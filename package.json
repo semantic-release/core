@@ -1,0 +1,25 @@
+{
+  "name": "core",
+  "version": "0.0.0-development",
+  "description": "Core JavaScript project scaffold.",
+  "type": "module",
+  "author": "Olabode Lawal-Shittabey (http://babblebey.dev)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/semantic-release/core.git"
+  },
+  "keywords": [
+    "javascript",
+    "node"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/semantic-release/core/issues"
+  },
+  "homepage": "https://github.com/semantic-release/core#readme"
+}
