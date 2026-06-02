@@ -247,7 +247,7 @@ async function callFail(context, plugins, err) {
 
 export default async (
   cliOptions = {},
-  { cwd = process.cwd(), env = process.env, stdout, stderr, outputFormatter } = {}
+  { cwd = process.cwd(), env = process.env, stdout, stderr, outputFormatter, defaultPlugins, onInit } = {}
 ) => {
   const { unhook } = hookStd(
     { silent: false, streams: [process.stdout, process.stderr, stdout, stderr].filter(Boolean) },
@@ -260,8 +260,12 @@ export default async (
     stderr: stderr || process.stderr,
     envCi: envCi({ env, cwd }),
     outputFormatter,
+    defaultPlugins,
   };
   context.logger = getLogger(context);
+  if (onInit) {
+    await onInit(context);
+  }
   try {
     const { plugins, options } = await getConfig(context, cliOptions);
     options.originalRepositoryURL = options.repositoryUrl;
