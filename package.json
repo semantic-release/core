@@ -5,20 +5,27 @@
   "type": "module",
   "author": "Olabode Lawal-Shittabey (http://babblebey.dev)",
   "main": "./index.js",
+  "types": "./index.d.ts",
   "exports": {
-    ".": "./index.js"
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
   },
   "files": [
     "lib",
-    "index.js"
+    "index.js",
+    "index.d.ts"
   ],
   "scripts": {
     "start": "node index.js",
     "lint": "npm run lint:prettier",
+    "lint:core": "npm run lint",
     "lint:prettier": "prettier --check \"*.{js,json,md}\"",
     "lint:prettier:fix": "prettier --write \"*.{js,json,md}\"",
     "format": "npm run lint:prettier:fix",
-    "test": "node --test"
+    "test": "node --test",
+    "test:core": "npm run test"
   },
   "repository": {
     "type": "git",
