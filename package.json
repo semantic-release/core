@@ -24,8 +24,17 @@
     "lint:prettier": "prettier --check \"*.{js,json,md}\"",
     "lint:prettier:fix": "prettier --write \"*.{js,json,md}\"",
     "format": "npm run lint:prettier:fix",
-    "test": "node --test",
+    "test": "ava --verbose",
     "test:core": "npm run test"
+  },
+  "ava": {
+    "files": [
+      "test/**/*.test.js"
+    ],
+    "nodeArguments": [
+      "--no-warnings"
+    ],
+    "timeout": "2m"
   },
   "repository": {
     "type": "git",
@@ -67,6 +76,7 @@
     "trailingComma": "es5"
   },
   "devDependencies": {
+    "ava": "8.0.1",
     "prettier": "3.8.3"
   }
 }

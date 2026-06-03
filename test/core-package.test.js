@@ -1,8 +1,7 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import test from "ava";
 
-test("core package exports default function", async () => {
+test("core package exports default function", async (t) => {
   const core = await import("../index.js");
 
-  assert.equal(typeof core.default, "function");
+  t.is(typeof core.default, "function");
 });
