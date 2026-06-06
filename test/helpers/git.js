@@ -7,6 +7,7 @@ import { execa } from "execa";
 import pEachSeries from "p-each-series";
 import gitLogParser from "git-log-parser";
 import getStream from "get-stream";
+import { GIT_NOTE_REF } from "../../lib/definitions/constants.js";
 
 /**
  * Initialize git repository.
@@ -135,6 +136,17 @@ export async function gitHead(execaOptions) {
 }
 
 /**
+ * Create a tag on the head commit in the current git repository.
+ *
+ * @param {string} tagName The tag name to create.
+ * @param {string} [sha] The commit on which to create the tag.
+ * @param {import("execa").Options} [execaOptions] Options to pass to execa.
+ */
+export async function gitTagVersion(tagName, sha, execaOptions) {
+  await execa("git", sha ? ["tag", "-f", tagName, sha] : ["tag", tagName], execaOptions);
+}
+
+/**
  * Get the first commit sha referenced by the given tag.
  *
  * @param {string} tagName Tag name.
@@ -154,6 +166,17 @@ export async function gitTagHead(tagName, execaOptions) {
  */
 export async function gitPush(repositoryUrl, branch, execaOptions) {
   await execa("git", ["push", "--tags", repositoryUrl, `HEAD:${branch}`], execaOptions);
+}
+
+/**
+ * Add a note to a Git reference.
+ *
+ * @param {string} note The note to add.
+ * @param {string} ref The ref to add the note to.
+ * @param {import("execa").Options} [execaOptions] Options to pass to execa.
+ */
+export async function gitAddNote(note, ref, execaOptions) {
+  await execa("git", ["notes", "--ref", `${GIT_NOTE_REF}-${ref}`, "add", "-m", note, ref], execaOptions);
 }
 
 /**

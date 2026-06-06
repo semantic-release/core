@@ -5,22 +5,36 @@ import test from "ava";
 
 import getConfig from "../lib/get-config.js";
 
-test("core requires an explicit analyzeCommits plugin when no defaults are injected", async (t) => {
+test("core uses plugins passed via options", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
+  const logger = {
+    success() {},
+    log() {},
+    warn() {},
+    error() {},
+    scope() {
+      return this;
+    },
+  };
+  const cliPlugins = [{ analyzeCommits() {} }];
+
   t.teardown(async () => {
     await rm(cwd, { recursive: true, force: true });
   });
 
-  const error = await t.throwsAsync(getConfig({ cwd, env: {} }, {}));
+  const { options } = await getConfig(
+    { cwd, env: {}, logger },
+    { repositoryUrl: "https://example.com/semantic-release.git", plugins: cliPlugins }
+  );
 
-  t.is(error.errors.length, 1);
-  t.is(error.errors[0].code, "EMISSINGREQUIREDPLUGIN");
-  t.regex(error.errors[0].details, /analyzeCommits/);
+  t.is(options.repositoryUrl, "https://example.com/semantic-release.git");
+  t.deepEqual(options.plugins, cliPlugins);
 });
 
-test("core consumes injected default plugins when a wrapper provides them", async (t) => {
+test("core ignores legacy defaultPlugins context argument", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
   const defaultPlugins = [{ analyzeCommits() {} }];
+  const cliPlugins = [{ analyzeCommits() {} }];
   const logger = {
     success() {},
     log() {},
@@ -36,9 +50,10 @@ test("core consumes injected default plugins when a wrapper provides them", asyn
 
   const { options } = await getConfig(
     { cwd, env: {}, defaultPlugins, logger },
-    { repositoryUrl: "https://example.com/semantic-release.git" }
+    { repositoryUrl: "https://example.com/semantic-release.git", plugins: cliPlugins }
   );
 
   t.is(options.repositoryUrl, "https://example.com/semantic-release.git");
-  t.deepEqual(options.plugins, defaultPlugins);
+  t.deepEqual(options.plugins, cliPlugins);
+  t.not(options.plugins, defaultPlugins);
 });
