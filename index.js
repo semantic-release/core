@@ -1,10 +1,8 @@
 import { pick } from "lodash-es";
-import envCi from "env-ci";
 import { hookStd } from "hook-std";
 import semver from "semver";
 import AggregateError from "aggregate-error";
 import hideSensitive from "./lib/hide-sensitive.js";
-import getConfig from "./lib/get-config.js";
 import verify from "./lib/verify.js";
 import getNextVersion from "./lib/get-next-version.js";
 import getCommits from "./lib/get-commits.js";
@@ -13,41 +11,18 @@ import getReleaseToAdd from "./lib/get-release-to-add.js";
 import { extractErrors, makeTag } from "./lib/utils.js";
 import getGitAuthUrl from "./lib/get-git-auth-url.js";
 import getBranches from "./lib/branches/index.js";
-import getLogger from "./lib/get-logger.js";
 import { addNote, getGitHead, getTagHead, isBranchUpToDate, push, pushNotes, tag, verifyAuth } from "./lib/git.js";
 import getError from "./lib/get-error.js";
-import { COMMIT_EMAIL, COMMIT_NAME } from "./lib/definitions/constants.js";
 
-async function formatOutput(context, text) {
-  return context.outputFormatter ? context.outputFormatter(text, context) : text;
+async function formatOutput(text) {
+  return text;
 }
 
 /* eslint complexity: off */
 async function run(context, plugins) {
-  const { cwd, env, options, logger, envCi } = context;
-  const { isCi, branch, prBranch, isPr } = envCi;
+  const { cwd, env, options, logger } = context;
+  const { isPr, prBranch, branch } = context.envCi;
   const ciBranch = isPr ? prBranch : branch;
-
-  if (!isCi && !options.dryRun && !options.noCi) {
-    logger.warn("This run was not triggered in a known CI environment, running in dry-run mode.");
-    options.dryRun = true;
-  } else {
-    // When running on CI, set the commits author and committer info and prevent the `git` CLI to prompt for username/password. See #703.
-    Object.assign(env, {
-      GIT_AUTHOR_NAME: COMMIT_NAME,
-      GIT_AUTHOR_EMAIL: COMMIT_EMAIL,
-      GIT_COMMITTER_NAME: COMMIT_NAME,
-      GIT_COMMITTER_EMAIL: COMMIT_EMAIL,
-      ...env,
-      GIT_ASKPASS: "echo",
-      GIT_TERMINAL_PROMPT: 0,
-    });
-  }
-
-  if (isCi && isPr && !options.noCi) {
-    logger.log("This run was triggered by a pull request and therefore a new version won't be published.");
-    return false;
-  }
 
   // Verify config
   await verify(context);
@@ -212,21 +187,20 @@ async function run(context, plugins) {
   if (options.dryRun) {
     logger.log(`Release note for version ${nextRelease.version}:`);
     if (nextRelease.notes) {
-      context.stdout.write(await formatOutput(context, nextRelease.notes));
+      context.stdout.write(await formatOutput(nextRelease.notes));
     }
   }
 
   return pick(context, ["lastRelease", "commits", "nextRelease", "releases"]);
 }
 
-async function logErrors(context, err) {
-  const { logger, stderr } = context;
+async function logErrors({ logger, stderr }, err) {
   const errors = extractErrors(err).sort((error) => (error.semanticRelease ? -1 : 0));
   for (const error of errors) {
     if (error.semanticRelease) {
       logger.error(`${error.code} ${error.message}`);
       if (error.details) {
-        stderr.write(await formatOutput(context, error.details)); // eslint-disable-line no-await-in-loop
+        stderr.write(await formatOutput(error.details)); // eslint-disable-line no-await-in-loop
       }
     } else {
       logger.error("An error occurred while running semantic-release: %O", error);
@@ -245,31 +219,24 @@ async function callFail(context, plugins, err) {
   }
 }
 
-export default async (
-  cliOptions = {},
-  { cwd = process.cwd(), env = process.env, stdout, stderr, outputFormatter, defaultPlugins, onInit } = {}
-) => {
-  const { unhook } = hookStd(
-    { silent: false, streams: [process.stdout, process.stderr, stdout, stderr].filter(Boolean) },
-    hideSensitive(env)
-  );
-  const context = {
-    cwd,
-    env,
-    stdout: stdout || process.stdout,
-    stderr: stderr || process.stderr,
-    envCi: envCi({ env, cwd }),
-    outputFormatter,
-    defaultPlugins,
-  };
-  context.logger = getLogger(context);
-  if (onInit) {
-    await onInit(context);
+export default async ({ context, plugins, onInit }) => {
+  if (!context?.options) {
+    throw new TypeError("core context.options must be provided by the caller");
   }
+
+  if (!plugins) {
+    throw new TypeError("core plugins pipeline must be provided by the caller");
+  }
+
+  const { unhook } = hookStd(
+    { silent: false, streams: [process.stdout, process.stderr, context.stdout, context.stderr].filter(Boolean) },
+    hideSensitive(context.env)
+  );
+
   try {
-    const { plugins, options } = await getConfig(context, cliOptions);
-    options.originalRepositoryURL = options.repositoryUrl;
-    context.options = options;
+    if (onInit) {
+      await onInit(context);
+    }
     try {
       const result = await run(context, plugins);
       unhook();

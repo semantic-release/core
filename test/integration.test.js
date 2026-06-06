@@ -1,14 +1,38 @@
 import test from "ava";
+import envCi from "env-ci";
 
 import semanticRelease from "../index.js";
+import getConfig from "../lib/get-config.js";
+import getLogger from "../lib/get-logger.js";
 import { createCiEnv, gitCommits, gitHead, gitRepo, gitTagHead } from "./helpers/git.js";
+
+async function executeCore(cliOptions, { cwd, env }) {
+  const envCiResult = envCi({ env, cwd });
+  const context = {
+    cwd,
+    env,
+    stdout: process.stdout,
+    stderr: process.stderr,
+    envCi: envCiResult,
+    ciBranch: envCiResult.isPr ? envCiResult.prBranch : envCiResult.branch,
+    skipRelease: envCiResult.isCi && envCiResult.isPr,
+  };
+  const logger = getLogger(context);
+  context.logger = logger;
+
+  const { plugins, options } = await getConfig(context, cliOptions);
+  options.originalRepositoryURL = options.repositoryUrl;
+  context.options = options;
+
+  return semanticRelease({ context, plugins, onInit: undefined });
+}
 
 test.serial("core runs a custom plugin stack in dry-run mode without creating a tag", async (t) => {
   const { cwd } = await gitRepo(true);
 
   await gitCommits(["fix: patch release"], { cwd });
 
-  const result = await semanticRelease(
+  const result = await executeCore(
     {
       branches: ["master"],
       dryRun: true,
@@ -34,7 +58,7 @@ test.serial("core calls success hooks for a custom plugin stack on a real releas
 
   let successContext;
 
-  const result = await semanticRelease(
+  const result = await executeCore(
     {
       branches: ["master"],
       plugins: [
@@ -61,7 +85,7 @@ test.serial("core calls success hooks for a custom plugin stack on a real releas
 test.serial("core returns false when the CI branch is outside the configured release branches", async (t) => {
   const { cwd } = await gitRepo(true);
 
-  const result = await semanticRelease(
+  const result = await executeCore(
     {
       branches: ["master"],
       plugins: [{ analyzeCommits: async () => "patch" }],
@@ -78,7 +102,7 @@ test.serial("core calls fail hooks for semantic-release errors raised by a custo
   let failContext;
 
   const error = await t.throwsAsync(
-    semanticRelease(
+    executeCore(
       {
         branches: ["master"],
         plugins: [

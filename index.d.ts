@@ -521,7 +521,7 @@ declare module "@semantic-release/core" {
     plugins: ReadonlyArray<PluginSpec>;
   }
 
-  /** semantic-release configuration specific for API usage. */
+  /** semantic-release configuration specific for legacy API usage. */
   export interface Config {
     /**
      * The current working directory to use. It should be configured to
@@ -717,5 +717,11 @@ declare module "@semantic-release/core" {
    * object.
    * @async
    */
-  export default function (options: Options, environment?: Config): Promise<Result>;
+  export default function (
+    input: {
+      context: VerifyConditionsContext & { options: Options };
+      plugins: Record<string, (...args: any[]) => any>;
+      onInit?: (context: VerifyConditionsContext) => Promise<void> | void;
+    }
+  ): Promise<Result>;
 }
