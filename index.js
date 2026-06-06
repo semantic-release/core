@@ -188,12 +188,9 @@ async function run(context, plugins) {
     `Published release ${nextRelease.version} on ${nextRelease.channel ? nextRelease.channel : "default"} channel`
   );
 
-  if (options.dryRun) {
-    console.log(nextRelease)
+  if (options.dryRun && nextRelease.notes) {
     logger.log(`Release note for version ${nextRelease.version}:`);
-    if (nextRelease.notes) {
-      context.stdout.write(await formatOutput(nextRelease.notes));
-    }
+    context.stdout.write(await formatOutput(nextRelease.notes));
   }
 
   return pick(context, ["lastRelease", "commits", "nextRelease", "releases"]);
