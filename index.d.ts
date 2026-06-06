@@ -724,4 +724,16 @@ declare module "@semantic-release/core" {
       onInit?: (context: VerifyConditionsContext) => Promise<void> | void;
     }
   ): Promise<Result>;
+
+  export const getConfig: (
+    context: { cwd: string; env: Record<string, any> },
+    inputOptions?: Options
+  ) => Promise<{ options: Options; plugins: Record<string, (...args: any[]) => any> }>;
+
+  export const getLogger: (context: {
+    stdout: NodeJS.WriteStream;
+    stderr: NodeJS.WriteStream;
+  }) => Signale<"error" | "log" | "success" | "warn">;
+
+  export const resolveEnvCi: (input: { env?: Record<string, any>; cwd?: string }) => EnvCi & Record<string, any>;
 }

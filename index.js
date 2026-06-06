@@ -14,6 +14,10 @@ import getBranches from "./lib/branches/index.js";
 import { addNote, getGitHead, getTagHead, isBranchUpToDate, push, pushNotes, tag, verifyAuth } from "./lib/git.js";
 import getError from "./lib/get-error.js";
 
+export { default as getConfig } from "./lib/get-config.js";
+export { default as getLogger } from "./lib/get-logger.js";
+export { default as resolveEnvCi } from "env-ci";
+
 async function formatOutput(text) {
   return text;
 }
@@ -185,6 +189,7 @@ async function run(context, plugins) {
   );
 
   if (options.dryRun) {
+    console.log(nextRelease)
     logger.log(`Release note for version ${nextRelease.version}:`);
     if (nextRelease.notes) {
       context.stdout.write(await formatOutput(nextRelease.notes));
