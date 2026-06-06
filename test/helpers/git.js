@@ -126,6 +126,53 @@ export async function gitCheckout(branch, create, execaOptions) {
 }
 
 /**
+ * Checkout a detached HEAD at the given commit.
+ *
+ * @param {string} repositoryUrl The repository remote URL.
+ * @param {string} head A commit sha to checkout.
+ * @returns {Promise<string>} The path to the detached-head repository.
+ */
+export async function gitDetachedHead(repositoryUrl, head) {
+  const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-detached-"));
+
+  await execa("git", ["init"], { cwd });
+  await execa("git", ["remote", "add", "origin", repositoryUrl], { cwd });
+  await execa("git", ["fetch", repositoryUrl], { cwd });
+  await execa("git", ["checkout", head], { cwd });
+  return cwd;
+}
+
+/**
+ * Checkout a detached HEAD based on a branch fetch.
+ *
+ * @param {string} repositoryUrl The repository remote URL.
+ * @param {string} branch The branch to fetch.
+ * @param {string} head A commit sha to checkout.
+ * @returns {Promise<string>} The path to the detached-head repository.
+ */
+export async function gitDetachedHeadFromBranch(repositoryUrl, branch, head) {
+  const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-detached-branch-"));
+
+  await execa("git", ["init"], { cwd });
+  await execa("git", ["remote", "add", "origin", repositoryUrl], { cwd });
+  await execa("git", ["fetch", "--force", repositoryUrl, `${branch}:remotes/origin/${branch}`], { cwd });
+  await execa("git", ["reset", "--hard", head], { cwd });
+  await execa("git", ["checkout", "-q", "-B", branch], { cwd });
+  return cwd;
+}
+
+/**
+ * Add a Git configuration value.
+ *
+ * @param {string} name Config name.
+ * @param {string} value Config value.
+ * @param {import("execa").Options} [execaOptions] Options to pass to execa.
+ */
+export async function gitAddConfig(name, value, execaOptions) {
+  await execa("git", ["config", "--add", name, value], execaOptions);
+}
+
+/**
  * Get the HEAD sha.
  *
  * @param {import("execa").Options} [execaOptions] Options to pass to execa.
@@ -158,6 +205,16 @@ export async function gitTagHead(tagName, execaOptions) {
 }
 
 /**
+ * Get the tag associated with a commit sha.
+ *
+ * @param {string} gitHead The commit sha for which to retrieve the associated tag.
+ * @param {import("execa").Options} [execaOptions] Options to pass to execa.
+ */
+export async function gitCommitTag(gitHead, execaOptions) {
+  return (await execa("git", ["describe", "--tags", "--exact-match", gitHead], execaOptions)).stdout;
+}
+
+/**
  * Push to the remote repository.
  *
  * @param {string} repositoryUrl The remote repository URL.
@@ -177,6 +234,50 @@ export async function gitPush(repositoryUrl, branch, execaOptions) {
  */
 export async function gitAddNote(note, ref, execaOptions) {
   await execa("git", ["notes", "--ref", `${GIT_NOTE_REF}-${ref}`, "add", "-m", note, ref], execaOptions);
+}
+
+/**
+ * Push all notes refs to the remote repository.
+ *
+ * @param {string} repositoryUrl The remote repository URL.
+ * @param {import("execa").Options} [execaOptions] Options to pass to execa.
+ */
+export async function gitPushNotes(repositoryUrl, execaOptions) {
+  await execa("git", ["push", repositoryUrl, "refs/notes/*:refs/notes/*"], execaOptions);
+}
+
+/**
+ * Fetch current git repository.
+ *
+ * @param {string} repositoryUrl The repository remote URL.
+ * @param {import("execa").Options} [execaOptions] Options to pass to execa.
+ */
+export async function gitFetch(repositoryUrl, execaOptions) {
+  await execa("git", ["fetch", repositoryUrl], execaOptions);
+}
+
+/**
+ * Get the note associated with a Git reference.
+ *
+ * @param {string} ref The ref to get the note from.
+ * @param {import("execa").Options} [execaOptions] Options to pass to execa.
+ */
+export async function gitGetNote(ref, execaOptions) {
+  return (await execa("git", ["notes", "--ref", `${GIT_NOTE_REF}-${ref}`, "show", ref], execaOptions)).stdout;
+}
+
+/**
+ * Get the remote tag head sha.
+ *
+ * @param {string} repositoryUrl The repository remote URL.
+ * @param {string} tagName Tag name.
+ * @param {import("execa").Options} [execaOptions] Options to pass to execa.
+ */
+export async function gitRemoteTagHead(repositoryUrl, tagName, execaOptions) {
+  return (await execa("git", ["ls-remote", "--tags", repositoryUrl, tagName], execaOptions)).stdout
+    .split("\n")
+    .filter((tag) => Boolean(tag))
+    .map((tag) => tag.match(/^(?<tag>\S+)/)[1])[0];
 }
 
 /**
