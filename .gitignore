@@ -130,3 +130,6 @@ _book
 
 # Mockserver
 CertificateAuthorityCertificate.pem
+
+# AI Native Dev - Private Mode
+.project
