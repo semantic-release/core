@@ -238,6 +238,10 @@ export default async ({ context, plugins, onInit }) => {
     throw new TypeError("core context.options must be provided by the caller");
   }
 
+  if (!plugins) {
+    throw new TypeError("core plugins input must be provided by the caller");
+  }
+
   const { unhook } = hookStd(
     { silent: false, streams: [process.stdout, process.stderr, context.stdout, context.stderr].filter(Boolean) },
     hideSensitive(context.env)

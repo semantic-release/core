@@ -187,7 +187,7 @@ test.serial("core gives precedence to direct plugins over context.options.plugin
   t.is(result.nextRelease.notes, "Notes from direct plugins");
 });
 
-test.serial("core builds the plugins pipeline from context.options when plugins arg is omitted", async (t) => {
+test.serial("core throws when plugins input is omitted", async (t) => {
   const { cwd } = await gitRepo(true);
 
   await gitCommits(["fix: patch release"], { cwd });
@@ -206,8 +206,7 @@ test.serial("core builds the plugins pipeline from context.options when plugins 
     { cwd, env: createCiEnv("master") }
   );
 
-  const result = await semanticRelease({ context, onInit: undefined });
+  const error = await t.throwsAsync(semanticRelease({ context, onInit: undefined }));
 
-  t.is(result.nextRelease.version, "1.0.0");
-  t.is(result.nextRelease.notes, "Notes from options plugins");
+  t.is(error.message, "core plugins input must be provided by the caller");
 });
