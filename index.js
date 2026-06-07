@@ -13,6 +13,7 @@ import getGitAuthUrl from "./lib/get-git-auth-url.js";
 import getBranches from "./lib/branches/index.js";
 import { addNote, getGitHead, getTagHead, isBranchUpToDate, push, pushNotes, tag, verifyAuth } from "./lib/git.js";
 import getError from "./lib/get-error.js";
+import { normalizePluginsInput } from "./lib/plugins/utils.js";
 
 export { default as getConfig } from "./lib/get-config.js";
 export { default as getLogger } from "./lib/get-logger.js";
@@ -198,6 +199,9 @@ async function run(context, plugins) {
   return pick(context, ["lastRelease", "commits", "nextRelease", "releases"]);
 }
 
+/**
+ * Log errors in a consistent way, with semantic-release errors first and their details if available, then other errors.
+ */
 async function logErrors({ logger, stderr }, err) {
   const errors = extractErrors(err).sort((error) => (error.semanticRelease ? -1 : 0));
   for (const error of errors) {
@@ -212,6 +216,9 @@ async function logErrors({ logger, stderr }, err) {
   }
 }
 
+/**
+ * Call the fail plugin with the extracted semantic-release errors.
+ */
 async function callFail(context, plugins, err) {
   const errors = extractErrors(err).filter((err) => err.semanticRelease);
   if (errors.length > 0) {
@@ -223,13 +230,12 @@ async function callFail(context, plugins, err) {
   }
 }
 
+/**
+ * Run semantic-release with the provided context and plugins, and handle errors in a consistent way, with semantic-release errors first and their details if available, then other errors.
+ */
 export default async ({ context, plugins, onInit }) => {
   if (!context?.options) {
     throw new TypeError("core context.options must be provided by the caller");
-  }
-
-  if (!plugins) {
-    throw new TypeError("core plugins pipeline must be provided by the caller");
   }
 
   const { unhook } = hookStd(
@@ -241,12 +247,13 @@ export default async ({ context, plugins, onInit }) => {
     if (onInit) {
       await onInit(context);
     }
+    const normalizedPlugins = await normalizePluginsInput(context, plugins);
     try {
-      const result = await run(context, plugins);
+      const result = await run(context, normalizedPlugins);
       unhook();
       return result;
     } catch (error) {
-      await callFail(context, plugins, error);
+      await callFail(context, normalizedPlugins, error);
       throw error;
     }
   } catch (error) {

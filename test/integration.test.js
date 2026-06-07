@@ -6,7 +6,7 @@ import getConfig from "../lib/get-config.js";
 import getLogger from "../lib/get-logger.js";
 import { createCiEnv, gitCommits, gitHead, gitRepo, gitTagHead } from "./helpers/git.js";
 
-async function executeCore(cliOptions, { cwd, env }) {
+async function getCoreExecutionInputs(cliOptions, { cwd, env }) {
   const envCiResult = envCi({ env, cwd });
   const context = {
     cwd,
@@ -23,6 +23,12 @@ async function executeCore(cliOptions, { cwd, env }) {
   const { plugins, options } = await getConfig(context, cliOptions);
   options.originalRepositoryURL = options.repositoryUrl;
   context.options = options;
+
+  return { context, plugins };
+}
+
+async function executeCore(cliOptions, { cwd, env }) {
+  const { context, plugins } = await getCoreExecutionInputs(cliOptions, { cwd, env });
 
   return semanticRelease({ context, plugins, onInit: undefined });
 }
@@ -121,4 +127,87 @@ test.serial("core calls fail hooks for semantic-release errors raised by a custo
   t.is(error.code, "EANALYZECOMMITSOUTPUT");
   t.is(failContext.errors.length, 1);
   t.is(failContext.errors[0].code, "EANALYZECOMMITSOUTPUT");
+});
+
+test.serial("core builds the plugins pipeline when raw plugins are passed directly", async (t) => {
+  const { cwd } = await gitRepo(true);
+
+  await gitCommits(["fix: patch release"], { cwd });
+
+  const { context } = await getCoreExecutionInputs(
+    {
+      branches: ["master"],
+      dryRun: true,
+      plugins: [{ analyzeCommits: async () => null }],
+    },
+    { cwd, env: createCiEnv("master") }
+  );
+
+  const result = await semanticRelease({
+    context,
+    plugins: [
+      {
+        analyzeCommits: async () => "patch",
+        generateNotes: async () => "Notes from direct plugins",
+      },
+    ],
+    onInit: undefined,
+  });
+
+  t.is(result.nextRelease.version, "1.0.0");
+  t.is(result.nextRelease.notes, "Notes from direct plugins");
+});
+
+test.serial("core gives precedence to direct plugins over context.options.plugins", async (t) => {
+  const { cwd } = await gitRepo(true);
+
+  await gitCommits(["fix: patch release"], { cwd });
+
+  const { context } = await getCoreExecutionInputs(
+    {
+      branches: ["master"],
+      dryRun: true,
+      plugins: [{ analyzeCommits: async () => null }],
+    },
+    { cwd, env: createCiEnv("master") }
+  );
+
+  const result = await semanticRelease({
+    context,
+    plugins: [
+      {
+        analyzeCommits: async () => "patch",
+        generateNotes: async () => "Notes from direct plugins",
+      },
+    ],
+    onInit: undefined,
+  });
+
+  t.truthy(result);
+  t.is(result.nextRelease.notes, "Notes from direct plugins");
+});
+
+test.serial("core builds the plugins pipeline from context.options when plugins arg is omitted", async (t) => {
+  const { cwd } = await gitRepo(true);
+
+  await gitCommits(["fix: patch release"], { cwd });
+
+  const { context } = await getCoreExecutionInputs(
+    {
+      branches: ["master"],
+      dryRun: true,
+      plugins: [
+        {
+          analyzeCommits: async () => "patch",
+          generateNotes: async () => "Notes from options plugins",
+        },
+      ],
+    },
+    { cwd, env: createCiEnv("master") }
+  );
+
+  const result = await semanticRelease({ context, onInit: undefined });
+
+  t.is(result.nextRelease.version, "1.0.0");
+  t.is(result.nextRelease.notes, "Notes from options plugins");
 });
