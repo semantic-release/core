@@ -57,3 +57,30 @@ test("core ignores legacy defaultPlugins context argument", async (t) => {
   t.deepEqual(options.plugins, cliPlugins);
   t.not(options.plugins, defaultPlugins);
 });
+
+test("core can skip plugin pipeline build when requested", async (t) => {
+  const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
+  const logger = {
+    success() {},
+    log() {},
+    warn() {},
+    error() {},
+    scope() {
+      return this;
+    },
+  };
+
+  t.teardown(async () => {
+    await rm(cwd, { recursive: true, force: true });
+  });
+
+  const { options, plugins } = await getConfig(
+    { cwd, env: {}, logger },
+    { repositoryUrl: "https://example.com/semantic-release.git", plugins: ["@semantic-release/commit-analyzer"] },
+    { buildPlugins: false }
+  );
+
+  t.is(options.repositoryUrl, "https://example.com/semantic-release.git");
+  t.deepEqual(options.plugins, ["@semantic-release/commit-analyzer"]);
+  t.is(plugins, undefined);
+});

@@ -727,8 +727,9 @@ declare module "@semantic-release/core" {
 
   export const getConfig: (
     context: { cwd: string; env: Record<string, any> },
-    inputOptions?: Options
-  ) => Promise<{ options: Options; plugins: Record<string, (...args: any[]) => any> }>;
+    inputOptions?: Options,
+    configOptions?: { buildPlugins?: boolean }
+  ) => Promise<{ options: Options; plugins?: Record<string, (...args: any[]) => any> }>;
 
   export const getLogger: (context: {
     stdout: NodeJS.WriteStream;
