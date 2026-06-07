@@ -11,8 +11,14 @@ const cwd = process.cwd();
 test.beforeEach((t) => {
   // Stub the logger functions
   t.context.log = stub();
+  t.context.warn = stub();
   t.context.success = stub();
-  t.context.logger = { log: t.context.log, success: t.context.success, scope: () => t.context.logger };
+  t.context.logger = {
+    log: t.context.log,
+    warn: t.context.warn,
+    success: t.context.success,
+    scope: () => t.context.logger,
+  };
 });
 
 test("Export plugins when required analyzeCommits is configured", async (t) => {
@@ -258,6 +264,8 @@ test("Falls through to EMISSINGREQUIREDPLUGIN when plugins list covers no analyz
     {}
   ))).errors;
   t.is(firstError.code, "EMISSINGREQUIREDPLUGIN");
+  t.true(t.context.warn.calledOnce);
+  t.regex(t.context.warn.firstCall.args[0], /Could not load fallback plugin/);
 });
 
 test("Does not inject fallback when analyzeCommits is covered by a plugin in the plugins list", async (t) => {
