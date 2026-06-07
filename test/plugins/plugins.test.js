@@ -246,6 +246,55 @@ test("Use default when only options are passed for a single plugin", async (t) =
   t.falsy(fail.path);
 });
 
+test("Falls through to EMISSINGREQUIREDPLUGIN when plugins list covers no analyzeCommits and fallback is unavailable", async (t) => {
+  // In @semantic-release/core's own test environment, @semantic-release/commit-analyzer is not
+  // a direct dependency. The fallback injection silently catches the load failure and lets
+  // the required-plugin validation throw EMISSINGREQUIREDPLUGIN.
+  const publishStub = stub().returns({});
+  const pluginWithoutAnalyze = { publish: publishStub };
+
+  const [firstError] = (await t.throwsAsync(() => getPlugins(
+    { cwd, logger: t.context.logger, options: { plugins: [pluginWithoutAnalyze] } },
+    {}
+  ))).errors;
+  t.is(firstError.code, "EMISSINGREQUIREDPLUGIN");
+});
+
+test("Does not inject fallback when analyzeCommits is covered by a plugin in the plugins list", async (t) => {
+  const analyzeStub = stub().returns("patch");
+  const pluginWithAnalyze = { analyzeCommits: analyzeStub };
+
+  const plugins = await getPlugins(
+    { cwd, logger: t.context.logger, options: { plugins: [pluginWithAnalyze] } },
+    {}
+  );
+
+  t.is(typeof plugins.analyzeCommits, "function");
+  // Confirm our stub is wired, meaning commit-analyzer fallback was NOT injected
+  const result = await plugins.analyzeCommits({ options: {}, commits: [], releases: [], lastRelease: {} });
+  t.true(analyzeStub.calledOnce);
+  t.is(result, "patch");
+});
+
+test("Does not inject fallback when analyzeCommits is set as an explicit step-level plugin spec", async (t) => {
+  const analyzeStub = stub().returns("minor");
+  // Providing analyzeCommits as a function (plugin spec) — should use it, not inject fallback
+  const plugins = await getPlugins(
+    {
+      cwd,
+      logger: t.context.logger,
+      options: { analyzeCommits: analyzeStub },
+    },
+    {}
+  );
+
+  t.is(typeof plugins.analyzeCommits, "function");
+  // Call with required commits input to confirm our stub is wired (not a fallback)
+  const result = await plugins.analyzeCommits({ options: {}, commits: [], releases: [], lastRelease: {} });
+  t.true(analyzeStub.calledOnce);
+  t.is(result, "minor");
+});
+
 test("Merge global options with plugin options", async (t) => {
   const plugins = await getPlugins(
     {
