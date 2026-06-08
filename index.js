@@ -15,7 +15,7 @@ import { addNote, getGitHead, getTagHead, isBranchUpToDate, push, pushNotes, tag
 import getError from "./lib/get-error.js";
 import { normalizePluginsInput } from "./lib/plugins/utils.js";
 
-export { default as getConfig } from "./lib/get-config.js";
+export { default as resolveConfig } from "./lib/resolve-config.js";
 export { default as getLogger } from "./lib/get-logger.js";
 export { default as resolveEnvCi } from "env-ci";
 

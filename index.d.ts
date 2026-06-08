@@ -725,10 +725,10 @@ declare module "@semantic-release/core" {
     }
   ): Promise<Result>;
 
-  export const getConfig: (
+  export const resolveConfig: (
     context: { cwd: string; env: Record<string, any> },
     inputOptions?: Options,
-    configOptions?: { buildPlugins?: boolean }
+    configOptions?: { buildPlugins?: boolean; baseConfig?: string | Record<string, any> }
   ) => Promise<{ options: Options; plugins?: Record<string, (...args: any[]) => any> }>;
 
   export const getLogger: (context: {
