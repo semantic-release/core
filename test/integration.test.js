@@ -2,7 +2,7 @@ import test from "ava";
 import envCi from "env-ci";
 
 import semanticRelease from "../index.js";
-import getConfig from "../lib/get-config.js";
+import resolveConfig from "../lib/resolve-config.js";
 import getLogger from "../lib/get-logger.js";
 import { createCiEnv, gitCommits, gitHead, gitRepo, gitTagHead } from "./helpers/git.js";
 
@@ -20,7 +20,7 @@ async function getCoreExecutionInputs(cliOptions, { cwd, env }) {
   const logger = getLogger(context);
   context.logger = logger;
 
-  const { plugins, options } = await getConfig(context, cliOptions);
+  const { plugins, options } = await resolveConfig(context, cliOptions);
   options.originalRepositoryURL = options.repositoryUrl;
   context.options = options;
 
