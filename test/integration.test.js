@@ -20,7 +20,7 @@ async function getCoreExecutionInputs(cliOptions, { cwd, env }) {
   const logger = getLogger(context);
   context.logger = logger;
 
-  const { plugins, options } = await resolveConfig(context, cliOptions);
+  const { plugins, options } = await resolveConfig(context, cliOptions, { buildPlugins: true });
   options.originalRepositoryURL = options.repositoryUrl;
   context.options = options;
 
