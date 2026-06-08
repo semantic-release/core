@@ -252,20 +252,17 @@ test("Use default when only options are passed for a single plugin", async (t) =
   t.falsy(fail.path);
 });
 
-test("Falls through to EMISSINGREQUIREDPLUGIN when plugins list covers no analyzeCommits and fallback is unavailable", async (t) => {
-  // In @semantic-release/core's own test environment, @semantic-release/commit-analyzer is not
-  // a direct dependency. The fallback injection silently catches the load failure and lets
-  // the required-plugin validation throw EMISSINGREQUIREDPLUGIN.
+test("Injects fallback analyzeCommits plugin when plugins list covers no analyzeCommits", async (t) => {
   const publishStub = stub().returns({});
   const pluginWithoutAnalyze = { publish: publishStub };
 
-  const [firstError] = (await t.throwsAsync(() => getPlugins(
+  const plugins = await getPlugins(
     { cwd, logger: t.context.logger, options: { plugins: [pluginWithoutAnalyze] } },
     {}
-  ))).errors;
-  t.is(firstError.code, "EMISSINGREQUIREDPLUGIN");
-  t.true(t.context.warn.calledOnce);
-  t.regex(t.context.warn.firstCall.args[0], /Could not load fallback plugin/);
+  );
+
+  t.is(typeof plugins.analyzeCommits, "function");
+  t.false(t.context.warn.called);
 });
 
 test("Does not inject fallback when analyzeCommits is covered by a plugin in the plugins list", async (t) => {
