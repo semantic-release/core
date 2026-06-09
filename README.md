@@ -106,7 +106,8 @@ Inputs:
 
 Behavior notes:
 
-- The logger supports semantic-release style levels (`log`, `success`, `warn`, `error`) and is designed for CI-friendly output.
+- Use this output to populate `context.logger` before calling `resolveConfig` or `default`.
+- The logger supports semantic-release style levels (`log`, `success`, `warn`, `error`).
 
 ### `resolveEnvCi({ env?, cwd? })`
 
