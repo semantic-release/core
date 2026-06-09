@@ -1,6 +1,6 @@
 # @semantic-release/core
 
-`@semantic-release/core` is the composable release engine behind [semantic-release](https://github.com/semantic-release/semantic-release).It owns orchestration, config resolution, branch validation, plugin execution, and git interactions, while leaving CLI parsing and wrapper defaults to higher-level packages.
+`@semantic-release/core` is the composable release engine behind [semantic-release](https://github.com/semantic-release/semantic-release). It owns orchestration, config resolution, branch validation, plugin execution, and git interactions, while leaving CLI parsing and wrapper defaults to higher-level packages.
 
 Use this package when you want to build a custom release workflow, compose your own CLI, or run semantic-release with an explicit plugin stack.
 
@@ -18,6 +18,83 @@ The package exports four public entry points:
 - `resolveConfig(context, runtimeOptions?, configOptions?)`: resolve configuration and, when requested, build the plugin pipeline.
 - `getLogger({ stdout, stderr })`: create the logger used by semantic-release.
 - `resolveEnvCi({ env?, cwd? })`: resolve CI metadata for the current environment.
+
+### `default`
+
+Signature:
+
+```ts
+default(input: {
+  context: Context;
+  plugins: PluginsInput;
+  onInit?: (context: Context) => Promise<void> | void;
+}): Promise<false | { lastRelease; commits; nextRelease; releases }>
+```
+
+Purpose:
+
+- Execute one full release run: verify context, normalize plugins, analyze commits, prepare, tag, publish, and call success/fail hooks.
+
+Inputs:
+
+- `context` (required): execution context. Must include `context.options`.
+- `plugins` (required): explicit plugin source for the run.
+- `onInit` (optional): hook called before plugin normalization.
+
+Behavior notes:
+
+- Throws a `TypeError` when `context.options` or `plugins` is missing.
+- Returns `false` when no release should be performed.
+- Returns a result object when a release is added or published.
+- Calls `plugins.fail` with extracted semantic-release errors when possible.
+
+Result shape:
+
+- `lastRelease`: last matching release on the active branch.
+- `commits`: commits used for analysis.
+- `nextRelease`: computed next release metadata (when applicable).
+- `releases`: publish/addChannel outputs from plugins.
+
+### `resolveConfig(context, runtimeOptions?, configOptions?)`
+
+Purpose:
+
+- Resolve semantic-release config into normalized `options`, and optionally build a normalized plugin pipeline.
+
+Typical usage:
+
+- Use `{ buildPlugins: true }` to return both `options` and `plugins` for [config-driven composition](#1-config-driven-composition).
+- Use `{ buildPlugins: false }` to resolve `options` only and provide `plugins` [explicitly](#2-direct-composition) to the default export.
+
+### `getLogger({ stdout, stderr })`
+
+Purpose:
+
+- Create a logger instance compatible with core/plugin execution.
+
+Inputs:
+
+- `stdout` and `stderr` writable streams (optional; defaults are process streams).
+
+Behavior notes:
+
+- The logger supports semantic-release style levels (`log`, `success`, `warn`, `error`) and is designed for CI-friendly output.
+
+### `resolveEnvCi({ env?, cwd? })`
+
+Purpose:
+
+- Detect CI runtime metadata (for example branch/pr context) using the current process environment and working directory.
+
+Inputs:
+
+- `env` (optional): environment variable object. Defaults to `process.env`.
+- `cwd` (optional): working directory. Defaults to `process.cwd()`.
+
+Behavior notes:
+
+- Use this output to populate `context.envCi` before calling `resolveConfig` or `default`.
+- Wrapper packages can apply additional policy on top of the detected CI state.
 
 ## Supported composition paths
 
