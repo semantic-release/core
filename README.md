@@ -1,7 +1,6 @@
 # @semantic-release/core
 
-`@semantic-release/core` is the composable release engine behind `semantic-release`.
-It owns orchestration, config resolution, branch validation, plugin execution, and git interactions, while leaving CLI parsing and wrapper defaults to higher-level packages.
+`@semantic-release/core` is the composable release engine behind [semantic-release](https://github.com/semantic-release/semantic-release).It owns orchestration, config resolution, branch validation, plugin execution, and git interactions, while leaving CLI parsing and wrapper defaults to higher-level packages.
 
 Use this package when you want to build a custom release workflow, compose your own CLI, or run semantic-release with an explicit plugin stack.
 
@@ -15,7 +14,7 @@ npm install @semantic-release/core
 
 The package exports four public entry points:
 
-- `default`: run a release with an explicit execution context and plugin input.
+- `default`: run a release with an explicit execution `context`, `plugins` input and an optional `onInit` callback.
 - `resolveConfig(context, runtimeOptions?, configOptions?)`: resolve configuration and, when requested, build the plugin pipeline.
 - `getLogger({ stdout, stderr })`: create the logger used by semantic-release.
 - `resolveEnvCi({ env?, cwd? })`: resolve CI metadata for the current environment.
