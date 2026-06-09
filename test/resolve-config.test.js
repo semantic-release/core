@@ -16,7 +16,7 @@ test("core uses plugins passed via options", async (t) => {
       return this;
     },
   };
-  const cliPlugins = [{ analyzeCommits() {} }];
+  const runtimePlugins = [{ analyzeCommits() {} }];
 
   t.teardown(async () => {
     await rm(cwd, { recursive: true, force: true });
@@ -24,17 +24,17 @@ test("core uses plugins passed via options", async (t) => {
 
   const { options } = await resolveConfig(
     { cwd, env: {}, logger },
-    { repositoryUrl: "https://example.com/semantic-release.git", plugins: cliPlugins }
+    { repositoryUrl: "https://example.com/semantic-release.git", plugins: runtimePlugins }
   );
 
   t.is(options.repositoryUrl, "https://example.com/semantic-release.git");
-  t.deepEqual(options.plugins, cliPlugins);
+  t.deepEqual(options.plugins, runtimePlugins);
 });
 
 test("core ignores legacy defaultPlugins context argument", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
   const defaultPlugins = [{ analyzeCommits() {} }];
-  const cliPlugins = [{ analyzeCommits() {} }];
+  const runtimePlugins = [{ analyzeCommits() {} }];
   const logger = {
     success() {},
     log() {},
@@ -50,11 +50,11 @@ test("core ignores legacy defaultPlugins context argument", async (t) => {
 
   const { options } = await resolveConfig(
     { cwd, env: {}, defaultPlugins, logger },
-    { repositoryUrl: "https://example.com/semantic-release.git", plugins: cliPlugins }
+    { repositoryUrl: "https://example.com/semantic-release.git", plugins: runtimePlugins }
   );
 
   t.is(options.repositoryUrl, "https://example.com/semantic-release.git");
-  t.deepEqual(options.plugins, cliPlugins);
+  t.deepEqual(options.plugins, runtimePlugins);
   t.not(options.plugins, defaultPlugins);
 });
 
@@ -84,7 +84,7 @@ test("core does not build plugin pipeline by default", async (t) => {
   t.is(plugins, undefined);
 });
 
-test("core merges baseConfig object before discovered config and cli options", async (t) => {
+test("core merges baseConfig object before discovered config and runtime options", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
   const logger = {
     success() {},

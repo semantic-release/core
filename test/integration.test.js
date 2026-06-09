@@ -6,7 +6,7 @@ import resolveConfig from "../lib/resolve-config.js";
 import getLogger from "../lib/get-logger.js";
 import { createCiEnv, gitCommits, gitHead, gitRepo, gitTagHead } from "./helpers/git.js";
 
-async function getCoreExecutionInputs(cliOptions, { cwd, env }) {
+async function getCoreExecutionInputs(runtimeOptions, { cwd, env }) {
   const envCiResult = envCi({ env, cwd });
   const context = {
     cwd,
@@ -20,15 +20,15 @@ async function getCoreExecutionInputs(cliOptions, { cwd, env }) {
   const logger = getLogger(context);
   context.logger = logger;
 
-  const { plugins, options } = await resolveConfig(context, cliOptions, { buildPlugins: true });
+  const { plugins, options } = await resolveConfig(context, runtimeOptions, { buildPlugins: true });
   options.originalRepositoryURL = options.repositoryUrl;
   context.options = options;
 
   return { context, plugins };
 }
 
-async function executeCore(cliOptions, { cwd, env }) {
-  const { context, plugins } = await getCoreExecutionInputs(cliOptions, { cwd, env });
+async function executeCore(runtimeOptions, { cwd, env }) {
+  const { context, plugins } = await getCoreExecutionInputs(runtimeOptions, { cwd, env });
 
   return semanticRelease({ context, plugins, onInit: undefined });
 }
