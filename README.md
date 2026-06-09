@@ -21,6 +21,8 @@ The package exports four public entry points:
 
 ### `default`
 
+Execute one full release run: verify context, normalize plugins, analyze commits, prepare, tag, publish, and call success/fail hooks.
+
 Signature:
 
 ```ts
@@ -30,10 +32,6 @@ default(input: {
   onInit?: (context: Context) => Promise<void> | void;
 }): Promise<false | { lastRelease; commits; nextRelease; releases }>
 ```
-
-Purpose:
-
-- Execute one full release run: verify context, normalize plugins, analyze commits, prepare, tag, publish, and call success/fail hooks.
 
 Inputs:
 
@@ -57,6 +55,8 @@ Result shape:
 
 ### `resolveConfig(context, runtimeOptions?, configOptions?)`
 
+Resolve semantic-release config into normalized `options`, and optionally build a normalized plugin pipeline.
+
 Signature:
 
 ```ts
@@ -69,10 +69,6 @@ resolveConfig(
   }
 ): Promise<{ options } | { options; plugins }>
 ```
-
-Purpose:
-
-- Resolve semantic-release config into normalized `options`, and optionally build a normalized plugin pipeline.
 
 Inputs:
 
@@ -96,9 +92,7 @@ Typical usage:
 
 ### `getLogger({ stdout, stderr })`
 
-Purpose:
-
-- Create a logger instance compatible with core/plugin execution.
+Create a logger instance compatible with core/plugin execution.
 
 Inputs:
 
@@ -111,9 +105,7 @@ Behavior notes:
 
 ### `resolveEnvCi({ env?, cwd? })`
 
-Purpose:
-
-- Detect CI runtime metadata (for example branch/pr context) using the current process environment and working directory.
+Detect CI runtime metadata (for example branch/pr context) using the current process environment and working directory.
 
 Inputs:
 
