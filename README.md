@@ -70,6 +70,7 @@ const cwd = process.cwd();
 const env = process.env;
 const envCi = resolveEnvCi({ cwd, env });
 const logger = getLogger({ stdout: process.stdout, stderr: process.stderr });
+
 const context = {
   cwd,
   env,
@@ -79,8 +80,8 @@ const context = {
   stderr: process.stderr,
 };
 const runtimeOptions = {
-  branches: ["main"],
-  analyzeCommits: { preset: "conventionalcommits" },
+  ci: true,
+  dryRun: true
 };
 
 const { options } = await resolveConfig(context, runtimeOptions, {
@@ -169,9 +170,7 @@ const context = {
   stdout: process.stdout,
   stderr: process.stderr,
 };
-const runtimeOptions = {
-  branches: ["main"],
-};
+const runtimeOptions = { dryRun: true };
 
 const { options, plugins } = await resolveConfig(context, runtimeOptions, {
   buildPlugins: true,
