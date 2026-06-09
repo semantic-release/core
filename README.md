@@ -57,14 +57,42 @@ Result shape:
 
 ### `resolveConfig(context, runtimeOptions?, configOptions?)`
 
+Signature:
+
+```ts
+resolveConfig(
+  context: Context,
+  runtimeOptions?: Options,
+  configOptions?: {
+    buildPlugins?: boolean;
+    baseConfig?: string | object;
+  }
+): Promise<{ options } | { options; plugins }>
+```
+
 Purpose:
 
 - Resolve semantic-release config into normalized `options`, and optionally build a normalized plugin pipeline.
 
+Inputs:
+
+- `context` (required): runtime context used during resolution (typically includes `cwd`, `env`, `envCi`, `stdout`, `stderr`, and `logger`).
+- `runtimeOptions` (optional): caller-provided semantic-release options that override values from config files and shareable configs.
+- `configOptions` (optional): controls how config resolution is performed. `configOptions` fields:
+  - `buildPlugins` (optional, default `false`):
+    - `true`: resolve config and build/normalize plugin pipeline.
+    - `false`: resolve config only; plugin loading is deferred to the caller.
+  - `baseConfig` (optional): seed config source (for example a shareable-config name or object) used as a base during resolution.
+
+Return value:
+
+- Always returns normalized `options`.
+- Returns `plugins` only when `configOptions.buildPlugins` is `true`.
+
 Typical usage:
 
-- Use `{ buildPlugins: true }` to return both `options` and `plugins` for [config-driven composition](#1-config-driven-composition).
-- Use `{ buildPlugins: false }` to resolve `options` only and provide `plugins` [explicitly](#2-direct-composition) to the default export.
+- Use `configOptions.buildPlugins: true` to return both `options` and `plugins` for [config-driven composition](#1-config-driven-composition).
+- Use `configOptions.buildPlugins: false` to resolve `options` only and provide `plugins` explicitly to the default export for [direct composition](#2-direct-composition).
 
 ### `getLogger({ stdout, stderr })`
 
