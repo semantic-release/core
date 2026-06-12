@@ -32,10 +32,15 @@ async function run(context, plugins, formatOutput) {
   const { isPr, prBranch, branch } = context.envCi;
   const ciBranch = isPr ? prBranch : branch;
 
+  // Write the original repository URL to the context options before it gets potentially replaced with an authenticated one, to allow plugins to access it if needed.
+  options.originalRepositoryURL = options.repositoryUrl;
+
   // Verify config
   await verify(context);
 
+  // Replace the repository URL with an authenticated one if possible, to allow pushing the release commits and tags, and fetching the commits to analyze when the repository is private.
   options.repositoryUrl = await getGitAuthUrl({ ...context, branch: { name: ciBranch } });
+
   context.branches = await getBranches(options.repositoryUrl, ciBranch, context);
   context.branch = context.branches.find(({ name }) => name === ciBranch);
 
