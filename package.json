@@ -18,7 +18,6 @@
     "index.d.ts"
   ],
   "scripts": {
-    "start": "node index.js",
     "lint": "npm run lint:prettier",
     "lint:core": "npm run lint",
     "lint:prettier": "prettier --check \"*.{js,json,md}\"",
