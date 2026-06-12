@@ -6,13 +6,13 @@ import resolveConfig from "../lib/resolve-config.js";
 import getLogger from "../lib/get-logger.js";
 import { createCiEnv, gitCommits, gitHead, gitRepo, gitTagHead } from "./helpers/git.js";
 
-async function getCoreExecutionInputs(runtimeOptions, { cwd, env }) {
+async function getCoreExecutionInputs(runtimeOptions, { cwd, env, stdout = process.stdout, stderr = process.stderr }) {
   const envCiResult = envCi({ env, cwd });
   const context = {
     cwd,
     env,
-    stdout: process.stdout,
-    stderr: process.stderr,
+    stdout,
+    stderr,
     envCi: envCiResult,
     ciBranch: envCiResult.isPr ? envCiResult.prBranch : envCiResult.branch,
     skipRelease: envCiResult.isCi && envCiResult.isPr,
@@ -31,6 +31,12 @@ async function executeCore(runtimeOptions, { cwd, env }) {
   const { context, plugins } = await getCoreExecutionInputs(runtimeOptions, { cwd, env });
 
   return semanticRelease({ context, plugins, onInit: undefined });
+}
+
+async function executeCoreWithInput(runtimeOptions, { cwd, env, stdout, stderr }, semanticReleaseInput = {}) {
+  const { context, plugins } = await getCoreExecutionInputs(runtimeOptions, { cwd, env, stdout, stderr });
+
+  return semanticRelease({ context, plugins, onInit: undefined, ...semanticReleaseInput });
 }
 
 test.serial("core runs a custom plugin stack in dry-run mode without creating a tag", async (t) => {
@@ -55,6 +61,80 @@ test.serial("core runs a custom plugin stack in dry-run mode without creating a 
   t.is(result.nextRelease.version, "1.0.0");
   t.is(result.nextRelease.notes, "Release notes");
   await t.throwsAsync(gitTagHead("v1.0.0", { cwd }));
+});
+
+test.serial("core applies injected formatOutput to dry-run release notes", async (t) => {
+  const { cwd } = await gitRepo(true);
+
+  await gitCommits(["fix: patch release"], { cwd });
+
+  const stdoutWrites = [];
+  const stdout = {
+    write: (value) => {
+      stdoutWrites.push(String(value));
+      return true;
+    },
+  };
+
+  const formatOutputCalls = [];
+  const result = await executeCoreWithInput(
+    {
+      branches: ["master"],
+      dryRun: true,
+      plugins: [
+        {
+          analyzeCommits: async () => "patch",
+          generateNotes: async () => "# Release notes",
+        },
+      ],
+    },
+    { cwd, env: createCiEnv("master"), stdout },
+    {
+      formatOutput: async (text) => {
+        formatOutputCalls.push(text);
+        return `formatted:${text}`;
+      },
+    }
+  );
+
+  t.is(result.nextRelease.notes, "# Release notes");
+  t.deepEqual(formatOutputCalls, ["# Release notes"]);
+  t.true(stdoutWrites.some((entry) => entry.includes("formatted:# Release notes")));
+});
+
+test.serial("core applies injected formatOutput to semantic-release error details", async (t) => {
+  const { cwd } = await gitRepo(true);
+
+  await gitCommits(["fix: patch release"], { cwd });
+
+  const stderrWrites = [];
+  const stderr = {
+    write: (value) => {
+      stderrWrites.push(String(value));
+      return true;
+    },
+  };
+
+  const formatOutputCalls = [];
+  const error = await t.throwsAsync(
+    executeCoreWithInput(
+      {
+        branches: ["master"],
+        plugins: [{ analyzeCommits: async () => "not-a-release-type" }],
+      },
+      { cwd, env: createCiEnv("master"), stderr },
+      {
+        formatOutput: async (text) => {
+          formatOutputCalls.push(text);
+          return `formatted-error:${text}`;
+        },
+      }
+    )
+  );
+
+  t.is(error.code, "EANALYZECOMMITSOUTPUT");
+  t.true(formatOutputCalls.length > 0);
+  t.true(stderrWrites.some((entry) => entry.includes("formatted-error:")));
 });
 
 test.serial("core calls success hooks for a custom plugin stack on a real release", async (t) => {
@@ -209,6 +289,30 @@ test.serial("core throws when plugins input is omitted", async (t) => {
   const error = await t.throwsAsync(semanticRelease({ context, onInit: undefined }));
 
   t.is(error.message, "core plugins input must be provided by the caller");
+});
+
+test.serial("core throws when formatOutput input is not a function", async (t) => {
+  const { cwd } = await gitRepo(true);
+
+  await gitCommits(["fix: patch release"], { cwd });
+
+  const { context, plugins } = await getCoreExecutionInputs(
+    {
+      branches: ["master"],
+      dryRun: true,
+      plugins: [
+        {
+          analyzeCommits: async () => "patch",
+          generateNotes: async () => "Notes from direct plugins",
+        },
+      ],
+    },
+    { cwd, env: createCiEnv("master") }
+  );
+
+  const error = await t.throwsAsync(semanticRelease({ context, plugins, onInit: undefined, formatOutput: true }));
+
+  t.is(error.message, "core formatOutput input must be a function when provided");
 });
 
 for (const field of ["options", "envCi", "logger", "stdout", "stderr"]) {

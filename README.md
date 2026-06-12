@@ -14,7 +14,7 @@ npm install @semantic-release/core
 
 The package exports four public entry points:
 
-- `default`: run a release with an explicit execution `context`, `plugins` input and an optional `onInit` callback.
+- `default`: run a release with an explicit execution `context`, `plugins` input, optional `onInit` callback, and optional terminal `formatOutput` formatter.
 - `resolveConfig(context, runtimeOptions?, configOptions?)`: resolve configuration and, when requested, build the plugin pipeline.
 - `getLogger({ stdout, stderr })`: create the logger used by semantic-release.
 - `resolveEnvCi({ env?, cwd? })`: resolve CI metadata for the current environment.
@@ -30,6 +30,7 @@ default(input: {
   context: Context;
   plugins: PluginsInput;
   onInit?: (context: Context) => Promise<void> | void;
+  formatOutput?: (text: string) => string | Promise<string>;
 }): Promise<false | { lastRelease; commits; nextRelease; releases }>
 ```
 
@@ -38,6 +39,7 @@ Inputs:
 - `context` (required): execution context. Must include `context.options`.
 - `plugins` (required): explicit plugin source for the run.
 - `onInit` (optional): hook called before plugin normalization.
+- `formatOutput` (optional): formatter used before writing markdown release notes or semantic-release error details to terminal streams.
 
 Behavior notes:
 
@@ -202,6 +204,7 @@ The default export expects an object with:
 - `context`: a release context that must include `context.options`.
 - `plugins`: the explicit plugin input for the run.
 - `onInit?`: an optional hook that runs before plugin normalization.
+- `formatOutput?`: optional formatter for markdown output written to `stdout`/`stderr`.
 
 `context.options` is required. `plugins` is required.
 

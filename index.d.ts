@@ -470,6 +470,11 @@ declare module "@semantic-release/core" {
   export type PluginsInput = ReadonlyArray<PluginSpec> | PluginsPipeline;
 
   /**
+   * Output formatter used for terminal writes of markdown notes/details.
+   */
+  export type OutputFormatter = (text: string) => string | Promise<string>;
+
+  /**
    * semantic-release options, after normalization and defaults have been
    * applied.
    */
@@ -748,6 +753,7 @@ declare module "@semantic-release/core" {
       context: VerifyConditionsContext & { options: Options };
       plugins: PluginsInput;
       onInit?: (context: VerifyConditionsContext) => Promise<void> | void;
+      formatOutput?: OutputFormatter;
     }
   ): Promise<Result>;
 

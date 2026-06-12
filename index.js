@@ -19,12 +19,15 @@ export { default as resolveConfig } from "./lib/resolve-config.js";
 export { default as getLogger } from "./lib/get-logger.js";
 export { default as resolveEnvCi } from "env-ci";
 
-async function formatOutput(text) {
+/**
+ * Default output formatter that doesn't transform the text, used when the caller doesn't provide one.
+ */
+async function defaultFormatOutput(text) {
   return text;
 }
 
 /* eslint complexity: off */
-async function run(context, plugins) {
+async function run(context, plugins, formatOutput) {
   const { cwd, env, options, logger } = context;
   const { isPr, prBranch, branch } = context.envCi;
   const ciBranch = isPr ? prBranch : branch;
@@ -202,7 +205,7 @@ async function run(context, plugins) {
 /**
  * Log errors in a consistent way, with semantic-release errors first and their details if available, then other errors.
  */
-async function logErrors({ logger, stderr }, err) {
+async function logErrors({ logger, stderr }, err, formatOutput) {
   const errors = extractErrors(err).sort((error) => (error.semanticRelease ? -1 : 0));
   for (const error of errors) {
     if (error.semanticRelease) {
@@ -219,13 +222,13 @@ async function logErrors({ logger, stderr }, err) {
 /**
  * Call the fail plugin with the extracted semantic-release errors.
  */
-async function callFail(context, plugins, err) {
+async function callFail(context, plugins, err, formatOutput) {
   const errors = extractErrors(err).filter((err) => err.semanticRelease);
   if (errors.length > 0) {
     try {
       await plugins.fail({ ...context, errors });
     } catch (error) {
-      await logErrors(context, error);
+      await logErrors(context, error, formatOutput);
     }
   }
 }
@@ -246,7 +249,11 @@ function validateContextContract(context) {
 /**
  * Run semantic-release with the provided context and plugins, and handle errors in a consistent way, with semantic-release errors first and their details if available, then other errors.
  */
-export default async ({ context, plugins, onInit }) => {
+export default async ({ context, plugins, onInit, formatOutput = defaultFormatOutput }) => {
+  if (typeof formatOutput !== "function") {
+    throw new TypeError("core formatOutput input must be a function when provided");
+  }
+
   validateContextContract(context);
 
   if (!plugins) {
@@ -264,15 +271,15 @@ export default async ({ context, plugins, onInit }) => {
     }
     const normalizedPlugins = await normalizePluginsInput(context, plugins);
     try {
-      const result = await run(context, normalizedPlugins);
+      const result = await run(context, normalizedPlugins, formatOutput);
       unhook();
       return result;
     } catch (error) {
-      await callFail(context, normalizedPlugins, error);
+      await callFail(context, normalizedPlugins, error, formatOutput);
       throw error;
     }
   } catch (error) {
-    await logErrors(context, error);
+    await logErrors(context, error, formatOutput);
     unhook();
     throw error;
   }
