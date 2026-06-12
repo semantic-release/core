@@ -1,9 +1,9 @@
-declare interface AggregateError extends Error {
-  errors: any[];
-}
-
 declare module "@semantic-release/core" {
   import { Signale } from "signale";
+  export interface SemanticReleaseAggregateError extends Error {
+    errors: any[];
+  }
+
   export interface EnvCi {
     /**
      * Boolean, true if the environment is a CI environment
@@ -148,7 +148,7 @@ declare module "@semantic-release/core" {
     /**
      * Errors that occurred during the release process.
      */
-    errors: AggregateError;
+    errors: SemanticReleaseAggregateError;
   }
 
   export interface Commit {
@@ -431,14 +431,43 @@ declare module "@semantic-release/core" {
   }
 
   /**
+   * Specifies a plugin reference to use.
+   *
+   * A plugin can be referenced by module name/path, or by an object carrying
+   * a `path` field and additional plugin configuration fields.
+   */
+  export type PluginReference = string | { path?: string | Record<string, any>; [name: string]: any };
+
+  /**
    * Specifies a plugin to use.
    *
-   * The plugin is specified by its module name.
-   *
-   * To pass options to a plugin, specify an array containing the plugin module
-   * name and an options object.
+   * To pass options to a plugin, specify a tuple containing the plugin
+   * reference and an options object.
    */
-  export type PluginSpec<T = any> = string | [string, T];
+  export type PluginSpec<T = any> = PluginReference | [PluginReference, T];
+
+  /**
+   * Normalized plugin pipeline used by core at runtime.
+   */
+  export interface PluginsPipeline {
+    verifyConditions: (...args: any[]) => any;
+    analyzeCommits: (...args: any[]) => any;
+    verifyRelease: (...args: any[]) => any;
+    generateNotes: (...args: any[]) => any;
+    prepare: (...args: any[]) => any;
+    publish: (...args: any[]) => any;
+    addChannel: (...args: any[]) => any;
+    success: (...args: any[]) => any;
+    fail: (...args: any[]) => any;
+  }
+
+  /**
+   * Plugin input accepted by the default export.
+   *
+   * Provide either an explicit list of plugin specs (direct composition), or a
+   * pre-built plugin pipeline (for example from `resolveConfig(..., { buildPlugins: true })`).
+   */
+  export type PluginsInput = ReadonlyArray<PluginSpec> | PluginsPipeline;
 
   /**
    * semantic-release options, after normalization and defaults have been
@@ -511,12 +540,10 @@ declare module "@semantic-release/core" {
      * See [Plugins configuration](https://semantic-release.gitbook.io/semantic-release/usage/plugins#plugins)
      * for more details.
      *
-     * Default: `[
-     *     "@semantic-release/commit-analyzer",
-     *     "@semantic-release/release-notes-generator",
-     *     "@semantic-release/npm",
-     *     "@semantic-release/github"
-     * ]`
+     * Default when building plugins via `resolveConfig(..., { buildPlugins: true })`:
+     * `["@semantic-release/commit-analyzer"]`.
+     *
+     * Wrapper-level default plugin stacks are not applied by core.
      */
     plugins: ReadonlyArray<PluginSpec>;
   }
@@ -653,12 +680,11 @@ declare module "@semantic-release/core" {
      * See [Plugins configuration](https://semantic-release.gitbook.io/semantic-release/usage/plugins#plugins)
      * for more details.
      *
-     * Default: `[
-     *     "@semantic-release/commit-analyzer",
-     *     "@semantic-release/release-notes-generator",
-     *     "@semantic-release/npm",
-     *     "@semantic-release/github"
-     * ]`
+     * Default when building plugins via `resolveConfig(..., { buildPlugins: true })`:
+     * `["@semantic-release/commit-analyzer"]`.
+     *
+     * In direct composition, the `plugins` input passed to the default export is
+     * authoritative.
      */
     plugins?: ReadonlyArray<PluginSpec> | undefined;
 
@@ -720,7 +746,7 @@ declare module "@semantic-release/core" {
   export default function (
     input: {
       context: VerifyConditionsContext & { options: Options };
-      plugins: Record<string, (...args: any[]) => any>;
+      plugins: PluginsInput;
       onInit?: (context: VerifyConditionsContext) => Promise<void> | void;
     }
   ): Promise<Result>;
@@ -729,7 +755,7 @@ declare module "@semantic-release/core" {
     context: { cwd: string; env: Record<string, any> },
     runtimeOptions?: Options,
     configOptions?: { buildPlugins?: boolean; baseConfig?: string | Record<string, any> }
-  ) => Promise<{ options: Options; plugins?: Record<string, (...args: any[]) => any> }>;
+  ) => Promise<{ options: Options; plugins?: PluginsPipeline }>;
 
   export const getLogger: (context: {
     stdout: NodeJS.WriteStream;
