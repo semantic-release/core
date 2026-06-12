@@ -18,11 +18,12 @@
     "index.d.ts"
   ],
   "scripts": {
-    "lint:prettier": "prettier --check \"*.{js,json,md}\" \".github/**/*.{md,yml}\"",
-    "lint:prettier:fix": "prettier --write \"*.{js,json,md}\" \".github/**/*.{md,yml}\"",
+    "lint:prettier": "prettier --check \"*.{js,json,md}\" \".github/**/*.{md,yml}\" \"{lib,test}/**/*.js\"",
+    "lint:prettier:fix": "prettier --write \"*.{js,json,md}\" \".github/**/*.{md,yml}\" \"{lib,test}/**/*.js\"",
     "format": "npm run lint:prettier:fix",
-    "test": "ava --verbose",
-    "test:core": "npm run test"
+    "test": "npm-run-all --print-label --parallel lint:* --serial test:*",
+    "test:unit": "ava --verbose",
+    "test:integration": "ava --verbose test/integration.test.js"
   },
   "ava": {
     "files": [
