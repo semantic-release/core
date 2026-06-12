@@ -22,10 +22,7 @@ test.beforeEach((t) => {
 });
 
 test("Export plugins when required analyzeCommits is configured", async (t) => {
-  const plugins = await getPlugins(
-    { cwd, options: { analyzeCommits: () => "patch" }, logger: t.context.logger },
-    {}
-  );
+  const plugins = await getPlugins({ cwd, options: { analyzeCommits: () => "patch" }, logger: t.context.logger }, {});
 
   // Verify the module returns a function for each plugin
   t.is(typeof plugins.verifyConditions, "function");
@@ -128,7 +125,12 @@ test('Merge global options, "plugins" options and step options', async (t) => {
     {
       cwd,
       logger: t.context.logger,
-      options: { globalOpt: "global", plugins: [plugin1, plugin2], analyzeCommits: () => "patch", verifyRelease: [plugin3] },
+      options: {
+        globalOpt: "global",
+        plugins: [plugin1, plugin2],
+        analyzeCommits: () => "patch",
+        verifyRelease: [plugin3],
+      },
     },
     {}
   );
@@ -256,10 +258,7 @@ test("Injects fallback analyzeCommits plugin when plugins list covers no analyze
   const publishStub = stub().returns({});
   const pluginWithoutAnalyze = { publish: publishStub };
 
-  const plugins = await getPlugins(
-    { cwd, logger: t.context.logger, options: { plugins: [pluginWithoutAnalyze] } },
-    {}
-  );
+  const plugins = await getPlugins({ cwd, logger: t.context.logger, options: { plugins: [pluginWithoutAnalyze] } }, {});
 
   t.is(typeof plugins.analyzeCommits, "function");
   t.false(t.context.warn.called);
@@ -269,10 +268,7 @@ test("Does not inject fallback when analyzeCommits is covered by a plugin in the
   const analyzeStub = stub().returns("patch");
   const pluginWithAnalyze = { analyzeCommits: analyzeStub };
 
-  const plugins = await getPlugins(
-    { cwd, logger: t.context.logger, options: { plugins: [pluginWithAnalyze] } },
-    {}
-  );
+  const plugins = await getPlugins({ cwd, logger: t.context.logger, options: { plugins: [pluginWithAnalyze] } }, {});
 
   t.is(typeof plugins.analyzeCommits, "function");
   // Confirm our stub is wired, meaning commit-analyzer fallback was NOT injected

@@ -178,7 +178,7 @@ const context = {
 };
 const runtimeOptions = {
   ci: true,
-  dryRun: true
+  dryRun: true,
 };
 
 const { options } = await resolveConfig(context, runtimeOptions, {

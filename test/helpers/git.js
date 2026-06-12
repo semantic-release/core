@@ -291,9 +291,13 @@ export async function gitRemoteTagHead(repositoryUrl, tagName, execaOptions) {
 export async function gitShallowClone(repositoryUrl, branch = "master", depth = 1) {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-clone-"));
 
-  await execa("git", ["clone", "--no-hardlinks", "--no-tags", "-b", branch, "--depth", `${depth}`, repositoryUrl, cwd], {
-    cwd,
-  });
+  await execa(
+    "git",
+    ["clone", "--no-hardlinks", "--no-tags", "-b", branch, "--depth", `${depth}`, repositoryUrl, cwd],
+    {
+      cwd,
+    }
+  );
 
   return cwd;
 }
