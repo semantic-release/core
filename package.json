@@ -18,10 +18,8 @@
     "index.d.ts"
   ],
   "scripts": {
-    "lint": "npm run lint:prettier",
-    "lint:core": "npm run lint",
-    "lint:prettier": "prettier --check \"*.{js,json,md}\"",
-    "lint:prettier:fix": "prettier --write \"*.{js,json,md}\"",
+    "lint:prettier": "prettier --check \"*.{js,json,md}\" \".github/**/*.{md,yml}\"",
+    "lint:prettier:fix": "prettier --write \"*.{js,json,md}\" \".github/**/*.{md,yml}\"",
     "format": "npm run lint:prettier:fix",
     "test": "ava --verbose",
     "test:core": "npm run test"
