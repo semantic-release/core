@@ -210,3 +210,41 @@ test.serial("core throws when plugins input is omitted", async (t) => {
 
   t.is(error.message, "core plugins input must be provided by the caller");
 });
+
+for (const field of ["options", "envCi", "logger", "stdout", "stderr"]) {
+  test.serial(`core throws when context.${field} is omitted`, async (t) => {
+    const { cwd } = await gitRepo(true);
+
+    await gitCommits(["fix: patch release"], { cwd });
+
+    const { context } = await getCoreExecutionInputs(
+      {
+        branches: ["master"],
+        dryRun: true,
+        plugins: [
+          {
+            analyzeCommits: async () => "patch",
+            generateNotes: async () => "Notes from options plugins",
+          },
+        ],
+      },
+      { cwd, env: createCiEnv("master") }
+    );
+
+    const invalidContext = { ...context, [field]: undefined };
+    const error = await t.throwsAsync(
+      semanticRelease({
+        context: invalidContext,
+        plugins: [
+          {
+            analyzeCommits: async () => "patch",
+            generateNotes: async () => "Notes from direct plugins",
+          },
+        ],
+        onInit: undefined,
+      })
+    );
+
+    t.is(error.message, `core context.${field} must be provided by the caller`);
+  });
+}

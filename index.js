@@ -231,12 +231,23 @@ async function callFail(context, plugins, err) {
 }
 
 /**
+ * Validate that the provided context contains the required fields and throw a semantic-release error if not.
+ */
+function validateContextContract(context) {
+  const requiredContextFields = ["options", "envCi", "logger", "stdout", "stderr"];
+
+  for (const field of requiredContextFields) {
+    if (!context?.[field]) {
+      throw new TypeError(`core context.${field} must be provided by the caller`);
+    }
+  }
+}
+
+/**
  * Run semantic-release with the provided context and plugins, and handle errors in a consistent way, with semantic-release errors first and their details if available, then other errors.
  */
 export default async ({ context, plugins, onInit }) => {
-  if (!context?.options) {
-    throw new TypeError("core context.options must be provided by the caller");
-  }
+  validateContextContract(context);
 
   if (!plugins) {
     throw new TypeError("core plugins input must be provided by the caller");
