@@ -45,6 +45,7 @@ Behavior notes:
 - Returns `false` when no release should be performed.
 - Returns a result object when a release is added or published.
 - Calls `plugins.fail` with extracted semantic-release errors when possible.
+- Does not implement wrapper-level CI policy guards such as pull-request skip or auto dry-run.
 
 Result shape:
 
@@ -96,10 +97,11 @@ Create a logger instance compatible with core/plugin execution.
 
 Inputs:
 
-- `stdout` and `stderr` writable streams (optional; defaults are process streams).
+- `stdout` and `stderr` writable streams (required).
 
 Behavior notes:
 
+- `getLogger` does not inject fallback process streams. Passing missing streams (for example `getLogger({})`) produces an unusable logger.
 - Use this output to populate `context.logger` before calling `resolveConfig` or `default`.
 - The logger supports semantic-release style levels (`log`, `success`, `warn`, `error`).
 
@@ -234,6 +236,8 @@ Examples:
 - Core owns the release engine and config-resolution API.
 - Core expects callers to provide plugins explicitly.
 - Wrapper packages can layer default plugins, CLI flags, or output formatting on top of core.
+- Wrapper/caller code owns CI policy decisions (for example PR skip and auto dry-run behavior).
+- Wrapper/caller code owns git process environment hardening (for example `GIT_AUTHOR_*`, `GIT_COMMITTER_*`, `GIT_ASKPASS`, and `GIT_TERMINAL_PROMPT`).
 
 ## Plugin loading security model
 
