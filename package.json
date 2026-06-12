@@ -20,6 +20,7 @@
   "scripts": {
     "lint:prettier": "prettier --check \"*.{js,json,md}\" \".github/**/*.{md,yml}\" \"{lib,test}/**/*.js\"",
     "lint:prettier:fix": "prettier --write \"*.{js,json,md}\" \".github/**/*.{md,yml}\" \"{lib,test}/**/*.js\"",
+    "lint:lockfile": "lockfile-lint",
     "lint:engines": "ls-engines",
     "format": "npm run lint:prettier:fix",
     "test": "npm-run-all --print-label --parallel lint:* --serial test:*",
@@ -78,6 +79,14 @@
     "printWidth": 120,
     "trailingComma": "es5"
   },
+  "lockfile-lint": {
+    "path": "package-lock.json",
+    "type": "npm",
+    "validate-https": true,
+    "allowed-hosts": [
+      "npm"
+    ]
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true
@@ -85,6 +94,7 @@
   "devDependencies": {
     "ava": "8.0.1",
     "fs-extra": "^11.3.5",
+    "lockfile-lint": "5.0.0",
     "ls-engines": "0.10.0",
     "prettier": "3.8.3",
     "sinon": "^22.0.0",
