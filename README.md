@@ -14,10 +14,10 @@ npm install @semantic-release/core
 
 The package exports four public entry points:
 
-- `default`: run a release with an explicit execution `context`, `plugins` input, optional `onInit` callback, and optional terminal `formatOutput` formatter.
-- `resolveConfig(context, runtimeOptions?, configOptions?)`: resolve configuration and, when requested, build the plugin pipeline.
-- `getLogger({ stdout, stderr })`: create the logger used by semantic-release.
-- `resolveEnvCi({ env?, cwd? })`: resolve CI metadata for the current environment.
+- [`default`](#default): run a release with an explicit execution `context`, `plugins` input, optional `onInit` callback, and optional terminal `formatOutput` formatter.
+- [`resolveConfig(context, runtimeOptions?, configOptions?)`](#resolveconfigcontext-runtimeoptions-configoptions): resolve configuration and, when requested, build the plugin pipeline.
+- [`getLogger({ stdout, stderr })`](#getlogger-stdout-stderr-): create the logger used by semantic-release.
+- [`resolveEnvCi({ env?, cwd? })`](#resolveenvci-env-cwd-): resolve CI metadata for the current environment.
 
 ### `default`
 
