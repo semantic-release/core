@@ -158,6 +158,24 @@ const result = await semanticRelease({
 });
 ```
 
+If you compose `@semantic-release/core` for a real CI publishing workflow, you must configure the Git process environment before calling core. This applies to any composed caller, including both config-driven and direct composition. `@semantic-release/core` does not inject wrapper-level Git defaults for composed callers.
+
+Typical CI setup:
+
+```js
+Object.assign(env, {
+  GIT_AUTHOR_NAME: "semantic-release-bot",
+  GIT_AUTHOR_EMAIL: "semantic-release-bot@example.com",
+  GIT_COMMITTER_NAME: "semantic-release-bot",
+  GIT_COMMITTER_EMAIL: "semantic-release-bot@example.com",
+  ...env,
+  GIT_ASKPASS: "echo",
+  GIT_TERMINAL_PROMPT: 0,
+});
+```
+
+Without this, publishing runs that need to create Git tags, notes, or release commits can fail when Git requires author identity or tries to prompt for credentials in a non-interactive environment.
+
 ### 2. Direct composition
 
 Pass an explicit plugin list or plugin pipeline directly to core when you want the plugin source to be authoritative in your code.
@@ -194,6 +212,8 @@ const result = await semanticRelease({
   plugins: ["@semantic-release/commit-analyzer"],
 });
 ```
+
+As with config-driven composition, direct-composition callers publishing from CI are responsible for configuring the Git process environment before invoking core.
 
 In the direct-composition path, the plugin list passed to core is the plugin source. `options.plugins` from config or shareable-config `extends` is not used as a fallback source for plugin loading.
 
@@ -241,6 +261,7 @@ Examples:
 - Wrapper packages can layer default plugins, CLI flags, or output formatting on top of core.
 - Wrapper/caller code owns CI policy decisions (for example PR skip and auto dry-run behavior).
 - Wrapper/caller code owns git process environment hardening (for example `GIT_AUTHOR_*`, `GIT_COMMITTER_*`, `GIT_ASKPASS`, and `GIT_TERMINAL_PROMPT`).
+- Composed callers publishing from CI should set those Git environment variables before invoking core.
 
 ## Plugin loading security model
 
