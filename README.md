@@ -158,7 +158,7 @@ const result = await semanticRelease({
 });
 ```
 
-If you compose `@semantic-release/core` for a real CI publishing workflow, you must configure the Git process environment before calling core. This applies to any composed caller, including both config-driven and direct composition. `@semantic-release/core` does not inject wrapper-level Git defaults for composed callers.
+If you compose `@semantic-release/core` for a real CI publishing workflow, core now applies default Git process environment values when they are missing.
 
 Typical CI setup:
 
@@ -174,7 +174,7 @@ Object.assign(env, {
 });
 ```
 
-Without this, publishing runs that need to create Git tags, notes, or release commits can fail when Git requires author identity or tries to prompt for credentials in a non-interactive environment.
+These values remain caller-overridable. Any values already present on `env` are preserved.
 
 ### 2. Direct composition
 
@@ -213,7 +213,7 @@ const result = await semanticRelease({
 });
 ```
 
-As with config-driven composition, direct-composition callers publishing from CI are responsible for configuring the Git process environment before invoking core.
+As with config-driven composition, direct-composition callers can still provide explicit Git process environment values before invoking core to override defaults.
 
 In the direct-composition path, the plugin list passed to core is the plugin source. `options.plugins` from config or shareable-config `extends` is not used as a fallback source for plugin loading.
 
@@ -260,8 +260,8 @@ Examples:
 - Core expects callers to provide plugins explicitly.
 - Wrapper packages can layer default plugins, CLI flags, or output formatting on top of core.
 - Wrapper/caller code owns CI policy decisions (for example PR skip and auto dry-run behavior).
-- Wrapper/caller code owns git process environment hardening (for example `GIT_AUTHOR_*`, `GIT_COMMITTER_*`, `GIT_ASKPASS`, and `GIT_TERMINAL_PROMPT`).
-- Composed callers publishing from CI should set those Git environment variables before invoking core.
+- Core applies default git process environment hardening (for example `GIT_AUTHOR_*`, `GIT_COMMITTER_*`, `GIT_ASKPASS`, and `GIT_TERMINAL_PROMPT`) when values are missing.
+- Wrapper/caller code can override any of those defaults by providing explicit values on `context.env`.
 
 ## Plugin loading security model
 
@@ -287,12 +287,12 @@ const env = process.env;
 const envCi = resolveEnvCi({ cwd, env });
 const logger = getLogger({ stdout: process.stdout, stderr: process.stderr });
 
+// Optional: override defaults applied by core.
 Object.assign(env, {
   GIT_AUTHOR_NAME: "semantic-release-bot",
   GIT_AUTHOR_EMAIL: "semantic-release-bot@example.com",
   GIT_COMMITTER_NAME: "semantic-release-bot",
   GIT_COMMITTER_EMAIL: "semantic-release-bot@example.com",
-  ...env,
   GIT_ASKPASS: "echo",
   GIT_TERMINAL_PROMPT: 0,
 });

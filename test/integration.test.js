@@ -4,6 +4,7 @@ import envCi from "env-ci";
 import semanticRelease from "../index.js";
 import resolveConfig from "../lib/resolve-config.js";
 import getLogger from "../lib/get-logger.js";
+import { COMMIT_EMAIL, COMMIT_NAME } from "../lib/definitions/constants.js";
 import { createCiEnv, gitCommits, gitHead, gitRepo, gitTagHead } from "./helpers/git.js";
 
 async function getCoreExecutionInputs(runtimeOptions, { cwd, env, stdout = process.stdout, stderr = process.stderr }) {
@@ -265,6 +266,72 @@ test.serial("core gives precedence to direct plugins over context.options.plugin
 
   t.truthy(result);
   t.is(result.nextRelease.notes, "Notes from direct plugins");
+});
+
+test.serial("core applies default git env values when caller does not set them", async (t) => {
+  const { cwd } = await gitRepo(true);
+
+  await gitCommits(["fix: patch release"], { cwd });
+
+  const env = createCiEnv("master");
+
+  await executeCore(
+    {
+      branches: ["master"],
+      dryRun: true,
+      plugins: [
+        {
+          analyzeCommits: async () => "patch",
+          generateNotes: async () => "Release notes",
+        },
+      ],
+    },
+    { cwd, env }
+  );
+
+  t.is(env.GIT_AUTHOR_NAME, COMMIT_NAME);
+  t.is(env.GIT_AUTHOR_EMAIL, COMMIT_EMAIL);
+  t.is(env.GIT_COMMITTER_NAME, COMMIT_NAME);
+  t.is(env.GIT_COMMITTER_EMAIL, COMMIT_EMAIL);
+  t.is(env.GIT_ASKPASS, "echo");
+  t.is(env.GIT_TERMINAL_PROMPT, 0);
+});
+
+test.serial("core preserves caller-provided git env values", async (t) => {
+  const { cwd } = await gitRepo(true);
+
+  await gitCommits(["fix: patch release"], { cwd });
+
+  const env = {
+    ...createCiEnv("master"),
+    GIT_AUTHOR_NAME: "custom-author",
+    GIT_AUTHOR_EMAIL: "custom-author@example.com",
+    GIT_COMMITTER_NAME: "custom-committer",
+    GIT_COMMITTER_EMAIL: "custom-committer@example.com",
+    GIT_ASKPASS: "custom-askpass",
+    GIT_TERMINAL_PROMPT: "1",
+  };
+
+  await executeCore(
+    {
+      branches: ["master"],
+      dryRun: true,
+      plugins: [
+        {
+          analyzeCommits: async () => "patch",
+          generateNotes: async () => "Release notes",
+        },
+      ],
+    },
+    { cwd, env }
+  );
+
+  t.is(env.GIT_AUTHOR_NAME, "custom-author");
+  t.is(env.GIT_AUTHOR_EMAIL, "custom-author@example.com");
+  t.is(env.GIT_COMMITTER_NAME, "custom-committer");
+  t.is(env.GIT_COMMITTER_EMAIL, "custom-committer@example.com");
+  t.is(env.GIT_ASKPASS, "custom-askpass");
+  t.is(env.GIT_TERMINAL_PROMPT, "1");
 });
 
 test.serial("core throws when plugins input is omitted", async (t) => {
