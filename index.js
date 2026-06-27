@@ -14,6 +14,7 @@ import getBranches from "./lib/branches/index.js";
 import { addNote, getGitHead, getTagHead, isBranchUpToDate, push, pushNotes, tag, verifyAuth } from "./lib/git.js";
 import getError from "./lib/get-error.js";
 import { normalizePluginsInput } from "./lib/plugins/utils.js";
+import { COMMIT_EMAIL, COMMIT_NAME } from "./lib/definitions/constants.js";
 
 export { default as resolveConfig } from "./lib/resolve-config.js";
 export { default as getLogger } from "./lib/get-logger.js";
@@ -252,6 +253,24 @@ function validateContextContract(context) {
 }
 
 /**
+ * Apply default Git environment variables to the provided env object, if they are not already set. This ensures that Git commands run with the expected author and committer information, and that prompts for credentials are suppressed in CI environments.
+ */
+function applyGitEnvDefaults(env) {
+  if (!env) {
+    return;
+  }
+
+  Object.assign(env, {
+    GIT_AUTHOR_NAME: env.GIT_AUTHOR_NAME ?? COMMIT_NAME,
+    GIT_AUTHOR_EMAIL: env.GIT_AUTHOR_EMAIL ?? COMMIT_EMAIL,
+    GIT_COMMITTER_NAME: env.GIT_COMMITTER_NAME ?? COMMIT_NAME,
+    GIT_COMMITTER_EMAIL: env.GIT_COMMITTER_EMAIL ?? COMMIT_EMAIL,
+    GIT_ASKPASS: env.GIT_ASKPASS ?? "echo",
+    GIT_TERMINAL_PROMPT: env.GIT_TERMINAL_PROMPT ?? 0,
+  });
+}
+
+/**
  * Run semantic-release with the provided context and plugins, and handle errors in a consistent way, with semantic-release errors first and their details if available, then other errors.
  */
 export default async ({ context, plugins, onInit, formatOutput = defaultFormatOutput }) => {
@@ -260,6 +279,7 @@ export default async ({ context, plugins, onInit, formatOutput = defaultFormatOu
   }
 
   validateContextContract(context);
+  applyGitEnvDefaults(context.env);
 
   if (!plugins) {
     throw new TypeError("core plugins input must be provided by the caller");
