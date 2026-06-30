@@ -92,6 +92,7 @@ Typical usage:
 
 - Use `configOptions.buildPlugins: true` to return both `options` and `plugins` for [config-driven composition](#1-config-driven-composition).
 - Use `configOptions.buildPlugins: false` to resolve `options` only and provide `plugins` explicitly to the default export for [direct composition](#2-direct-composition).
+- Use `configOptions.buildPlugins: false` when wrapper code needs to read `options.plugins`, enforce required plugins, and then pass the final plugin list explicitly to the default export for [direct composition](#2-direct-composition).
 
 ### `getLogger({ stdout, stderr })`
 
@@ -213,9 +214,52 @@ const result = await semanticRelease({
 });
 ```
 
+Wrappers can also use `resolveConfig(..., { buildPlugins: false })` to read configured plugin specs, apply wrapper policy, and then pass the final plugin list explicitly to core. This remains direct composition because the explicit `plugins` argument is still authoritative.
+
+```js
+import semanticRelease, { getLogger, resolveConfig, resolveEnvCi } from "@semantic-release/core";
+
+const BASE_CONFIG = {
+  plugins: ["@semantic-release/commit-analyzer", "@semantic-release/release-notes-generator"],
+};
+
+function ensureRequiredPlugins(configuredPlugins) {
+  return configuredPlugins.includes("@semantic-release/git")
+    ? configuredPlugins
+    : [...configuredPlugins, "@semantic-release/git"];
+}
+
+const cwd = process.cwd();
+const env = process.env;
+const envCi = resolveEnvCi({ cwd, env });
+const logger = getLogger({ stdout: process.stdout, stderr: process.stderr });
+
+const context = {
+  cwd,
+  env,
+  envCi,
+  logger,
+  stdout: process.stdout,
+  stderr: process.stderr,
+};
+
+const { options } = await resolveConfig(context, {}, {
+  buildPlugins: false,
+  baseConfig: BASE_CONFIG,
+});
+
+const configuredPlugins = Array.isArray(options.plugins) ? options.plugins : [];
+const plugins = ensureRequiredPlugins(configuredPlugins);
+
+await semanticRelease({
+  context: { ...context, options },
+  plugins,
+});
+```
+
 As with config-driven composition, direct-composition callers can still provide explicit Git process environment values before invoking core to override defaults.
 
-In the direct-composition path, the plugin list passed to core is the plugin source. `options.plugins` from config or shareable-config `extends` is not used as a fallback source for plugin loading.
+In the direct-composition path, any plugin list passed to core is the plugin source, whether it comes directly from caller code or from wrapper code that first reads `options.plugins`. `options.plugins` from config or shareable-config `extends` is not used as a fallback source for plugin loading once the caller passes `plugins` explicitly.
 
 ## Core contract
 
