@@ -243,10 +243,14 @@ const context = {
   stderr: process.stderr,
 };
 
-const { options } = await resolveConfig(context, {}, {
-  buildPlugins: false,
-  baseConfig: BASE_CONFIG,
-});
+const { options } = await resolveConfig(
+  context,
+  {},
+  {
+    buildPlugins: false,
+    baseConfig: BASE_CONFIG,
+  }
+);
 
 const configuredPlugins = Array.isArray(options.plugins) ? options.plugins : [];
 const plugins = ensureRequiredPlugins(configuredPlugins);
