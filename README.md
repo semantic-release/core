@@ -341,6 +341,7 @@ Object.assign(env, {
   GIT_AUTHOR_EMAIL: "semantic-release-bot@example.com",
   GIT_COMMITTER_NAME: "semantic-release-bot",
   GIT_COMMITTER_EMAIL: "semantic-release-bot@example.com",
+  ...env,
   GIT_ASKPASS: "echo",
   GIT_TERMINAL_PROMPT: 0,
 });
