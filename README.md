@@ -282,9 +282,13 @@ Examples:
 
 ## Git process environment defaults
 
-When you compose `@semantic-release/core` for a real CI publishing workflow, the caller or wrapper should set the Git process environment values it wants to use in CI. If those values are missing, core applies its defaults.
+The Git process environment is what core and git use to make automated releases non-interactive and to attribute commits and tags correctly in CI.
 
-Typical CI setup:
+Set these values before building the release `context` so `context.env` already includes them.
+
+The example below shows the Git process environment values a caller or wrapper can set for CI.
+
+Typical caller-provided CI setup:
 
 ```js
 Object.assign(env, {
@@ -297,6 +301,8 @@ Object.assign(env, {
   GIT_TERMINAL_PROMPT: 0,
 });
 ```
+
+For each of these value that you do not set, core applies its own defaults.
 
 ## Dependency and ownership model
 
