@@ -159,24 +159,6 @@ const result = await semanticRelease({
 });
 ```
 
-If you compose `@semantic-release/core` for a real CI publishing workflow, core now applies default Git process environment values when they are missing.
-
-Typical CI setup:
-
-```js
-Object.assign(env, {
-  GIT_AUTHOR_NAME: "semantic-release-bot",
-  GIT_AUTHOR_EMAIL: "semantic-release-bot@example.com",
-  GIT_COMMITTER_NAME: "semantic-release-bot",
-  GIT_COMMITTER_EMAIL: "semantic-release-bot@example.com",
-  ...env,
-  GIT_ASKPASS: "echo",
-  GIT_TERMINAL_PROMPT: 0,
-});
-```
-
-These values remain caller-overridable. Any values already present on `env` are preserved.
-
 ### 2. Direct composition
 
 Pass an explicit plugin list or plugin pipeline directly to core when you want the plugin source to be authoritative in your code.
@@ -261,8 +243,6 @@ await semanticRelease({
 });
 ```
 
-As with config-driven composition, direct-composition callers can still provide explicit Git process environment values before invoking core to override defaults.
-
 In the direct-composition path, any plugin list passed to core is the plugin source, whether it comes directly from caller code or from wrapper code that first reads `options.plugins`. `options.plugins` from config or shareable-config `extends` is not used as a fallback source for plugin loading once the caller passes `plugins` explicitly.
 
 ## Core contract
@@ -300,6 +280,24 @@ Examples:
 - `options.analyzeCommits` is a plugin spec -> no fallback injection.
 - `options.analyzeCommits` is an options-only plain object or is absent -> commit-analyzer is injected and the options are merged into it.
 
+## Git process environment defaults
+
+When you compose `@semantic-release/core` for a real CI publishing workflow, the caller or wrapper should set the Git process environment values it wants to use in CI. If those values are missing, core applies its defaults.
+
+Typical CI setup:
+
+```js
+Object.assign(env, {
+  GIT_AUTHOR_NAME: "semantic-release-bot",
+  GIT_AUTHOR_EMAIL: "semantic-release-bot@semantic-release.org",
+  GIT_COMMITTER_NAME: "semantic-release-bot",
+  GIT_COMMITTER_EMAIL: "semantic-release-bot@semantic-release.org",
+  ...env,
+  GIT_ASKPASS: "echo",
+  GIT_TERMINAL_PROMPT: 0,
+});
+```
+
 ## Dependency and ownership model
 
 `@semantic-release/core` does not own CLI parsing or wrapper defaults.
@@ -308,7 +306,7 @@ Examples:
 - Core expects callers to provide plugins explicitly.
 - Wrapper packages can layer default plugins, CLI flags, or output formatting on top of core.
 - Wrapper/caller code owns CI policy decisions (for example PR skip and auto dry-run behavior).
-- Core applies default git process environment hardening (for example `GIT_AUTHOR_*`, `GIT_COMMITTER_*`, `GIT_ASKPASS`, and `GIT_TERMINAL_PROMPT`) when values are missing.
+- Core applies default git process environment hardening when values are missing; see [Git process environment defaults](#git-process-environment-defaults).
 - Wrapper/caller code can override any of those defaults by providing explicit values on `context.env`.
 
 ## Plugin loading security model
