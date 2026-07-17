@@ -40,7 +40,7 @@ declare module "@semantic-release/core" {
      *
      * Has error, log, warn and success methods.
      */
-    logger: Signale<"error" | "log" | "success" | "warn">;
+    logger: Signale<"error" | "log" | "success" | "warn" | "start" | "skip" | "complete">;
 
     /**
      * Semantic release configuration
@@ -769,7 +769,7 @@ declare module "@semantic-release/core" {
   export const getLogger: (context: {
     stdout: NodeJS.WriteStream;
     stderr: NodeJS.WriteStream;
-  }) => Signale<"error" | "log" | "success" | "warn">;
+  }) => Signale<"error" | "log" | "success" | "warn" | "start" | "skip" | "complete">;
 
   export const resolveEnvCi: (input: { env?: Record<string, any>; cwd?: string }) => EnvCi & Record<string, any>;
 }

@@ -106,7 +106,7 @@ Behavior notes:
 
 - `getLogger` does not inject fallback process streams. Passing missing streams (for example `getLogger({})`) produces an unusable logger.
 - Use this output to populate `context.logger` before calling `resolveConfig` or `default`.
-- The logger supports semantic-release style levels (`log`, `success`, `warn`, `error`).
+- The logger supports semantic-release style levels (`log`, `success`, `warn`, `error`, `start`, `skip`, `complete`).
 
 ### `resolveEnvCi({ env?, cwd? })`
 
