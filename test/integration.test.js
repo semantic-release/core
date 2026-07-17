@@ -1,10 +1,11 @@
 import test from "ava";
 import envCi from "env-ci";
+import { escapeRegExp } from "lodash-es";
 
 import semanticRelease from "../index.js";
 import resolveConfig from "../lib/resolve-config.js";
 import getLogger from "../lib/get-logger.js";
-import { COMMIT_EMAIL, COMMIT_NAME } from "../lib/definitions/constants.js";
+import { COMMIT_EMAIL, COMMIT_NAME, SECRET_REPLACEMENT } from "../lib/definitions/constants.js";
 import { createCiEnv, gitCommits, gitHead, gitRepo, gitTagHead } from "./helpers/git.js";
 
 async function getCoreExecutionInputs(runtimeOptions, { cwd, env, stdout = process.stdout, stderr = process.stderr }) {
@@ -419,3 +420,53 @@ for (const field of ["options", "envCi", "logger", "stdout", "stderr"]) {
     t.is(error.message, `core context.${field} must be provided by the caller`);
   });
 }
+
+test.serial("Hide encoded credentials in the logs of a failing git command", async (t) => {
+  const { cwd } = await gitRepo(true);
+  await gitCommits(["First"], { cwd });
+
+  // `GIT_CREDENTIALS` contains URL reserved characters, so the authenticated repository URL built by
+  // `get-git-auth-url.js` contains the credentials percent-encoded (`user:abc%40def%2Fsecret`).
+  // The remote points to a closed loopback port, so the first git command using the authenticated URL
+  // fails and the failing command is logged.
+  const env = { ...createCiEnv("master"), GIT_CREDENTIALS: "user:abc@def/secret" };
+  const stdoutChunks = [];
+  const stderrChunks = [];
+  const stdout = {
+    write: (value) => {
+      stdoutChunks.push(String(value));
+      return true;
+    },
+  };
+  const stderr = {
+    write: (value) => {
+      stderrChunks.push(String(value));
+      return true;
+    },
+  };
+
+  await t.throwsAsync(
+    executeCoreWithInput(
+      {
+        branches: ["master"],
+        repositoryUrl: "http://127.0.0.1:9/owner/repo.git",
+        plugins: [
+          {
+            analyzeCommits: async () => "patch",
+            generateNotes: async () => "Release notes",
+          },
+        ],
+      },
+      { cwd, env, stdout, stderr }
+    )
+  );
+
+  const output = stdoutChunks.join("") + stderrChunks.join("");
+
+  // The failing git command was logged with the credentials masked.
+  t.regex(output, /127\.0\.0\.1:9/);
+  t.regex(output, new RegExp(escapeRegExp(SECRET_REPLACEMENT)));
+  t.notRegex(output, new RegExp(escapeRegExp(env.GIT_CREDENTIALS)));
+  t.notRegex(output, new RegExp(escapeRegExp("user:abc%40def%2Fsecret")));
+  t.notRegex(output, new RegExp(escapeRegExp(encodeURIComponent(env.GIT_CREDENTIALS))));
+});
