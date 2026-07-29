@@ -73,7 +73,7 @@
     "signale": "^1.2.1"
   },
   "engines": {
-    "node": "^22.14.0 || >= 24.10.0"
+    "node": "^22.22.2 || >=24.15"
   },
   "prettier": {
     "printWidth": 120,
