@@ -13,6 +13,17 @@ const token = "github-token";
 let env;
 let npmTestEnv;
 
+const {
+  GITHUB_ACTION,
+  GITHUB_ACTIONS,
+  GITHUB_BASE_REF,
+  GITHUB_EVENT_NAME,
+  GITHUB_HEAD_REF,
+  GITHUB_REF,
+  GITHUB_TOKEN,
+  ...processEnvWithoutGitHubActionsVariables
+} = process.env;
+
 const pluginStack = [
   "@semantic-release/commit-analyzer",
   "@semantic-release/release-notes-generator",
@@ -63,16 +74,17 @@ test.before(async () => {
   await startE2EEnvironment();
   const authEnv = npmRegistry.authEnv();
   env = {
-    ...process.env,
+    ...processEnvWithoutGitHubActionsVariables,
     ...authEnv,
     CI: "true",
-    GH_TOKEN: token,
+    GIT_CREDENTIALS: gitbox.gitCredential,
+    GITHUB_TOKEN: token,
     TRAVIS: "true",
     TRAVIS_BRANCH: "master",
     TRAVIS_PULL_REQUEST: "false",
     GITHUB_API_URL: mockServer.url,
   };
-  npmTestEnv = { ...process.env, ...authEnv };
+  npmTestEnv = { ...processEnvWithoutGitHubActionsVariables, ...authEnv };
 });
 
 test.after.always(async () => {
