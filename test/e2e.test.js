@@ -127,6 +127,31 @@ test.serial("core composes release notes, npm, and GitHub plugins for a real rel
   await mockServer.verify(createPatchRelease);
 });
 
+test.serial("core composes plugins in dry-run mode without publishing", async (t) => {
+  const packageName = "core-direct-composition-dry-run";
+  const { cwd, repositoryUrl, authUrl } = await gitbox.createRepo(packageName);
+  await writeJson(path.resolve(cwd, "package.json"), {
+    name: packageName,
+    version: "0.0.0-dev",
+    repository: { url: repositoryUrl },
+    publishConfig: { registry: npmRegistry.url },
+  });
+
+  const verifyRepository = await mockRepository(packageName);
+  await gitCommits(["feat: generate dry-run notes"], { cwd });
+
+  const result = await executeCore(cwd, { branches: ["master"], dryRun: true });
+
+  t.is(result.nextRelease.type, "minor");
+  t.is(result.nextRelease.version, "1.0.0");
+  t.regex(result.nextRelease.notes, /generate dry-run notes/);
+  t.is((await readJson(path.resolve(cwd, "package.json"))).version, "0.0.0-dev");
+  await t.throwsAsync(gitTagHead("v1.0.0", { cwd }));
+  t.is(await gitRemoteTagHead(authUrl, "v1.0.0", { cwd }), undefined);
+  await mockServer.verify(verifyRepository);
+  await t.throwsAsync(npmView(packageName, npmTestEnv));
+});
+
 async function npmView(packageName, environment) {
   return JSON.parse((await execa("npm", ["view", packageName, "--json"], { env: environment })).stdout);
 }
