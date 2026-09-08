@@ -51,11 +51,22 @@ async function executeCoreWithDirectPlugins(cwd, options = {}) {
   const stderr = process.stderr;
   const envCi = resolveEnvCi({ cwd, env });
   const context = { cwd, env, envCi, stdout, stderr, logger: getLogger({ stdout, stderr }) };
-  const { options: resolvedOptions } = await resolveConfig(
-    context,
-    { ...options, successCommentCondition: false, failCommentCondition: false },
-  );
+  const { options: resolvedOptions } = await resolveConfig(context, {
+    ...options,
+    successCommentCondition: false,
+    failCommentCondition: false,
+  });
   return directCore({ context: { ...context, options: resolvedOptions }, plugins: pluginStack });
+}
+
+// Config-driven composition
+async function executeCoreWithReleaseConfig(cwd, options = {}) {
+  const stdout = process.stdout;
+  const stderr = process.stderr;
+  const envCi = resolveEnvCi({ cwd, env });
+  const context = { cwd, env, envCi, stdout, stderr, logger: getLogger({ stdout, stderr }) };
+  const { options: resolvedOptions, plugins } = await resolveConfig(context, options, { buildPlugins: true });
+  return directCore({ context: { ...context, options: resolvedOptions }, plugins });
 }
 
 async function mockRepository(repositoryName) {
@@ -199,6 +210,42 @@ test.serial("core composes directly supplied plugins in dry-run mode", async (t)
   t.is((await readJson(path.resolve(cwd, "package.json"))).version, "0.0.0-dev");
   await t.throwsAsync(gitTagHead("v1.0.0", { cwd }));
   t.is(await gitRemoteTagHead(authUrl, "v1.0.0", { cwd }), undefined);
+  await mockServer.verify(verifyRepository);
+  await t.throwsAsync(npmView(packageName, npmTestEnv));
+});
+
+test.serial("core composes plugins configured in .releaserc", async (t) => {
+  const packageName = "core-release-config-composition";
+  const { cwd, repositoryUrl, authUrl } = await gitbox.createRepo(packageName);
+  await writeJson(path.resolve(cwd, "package.json"), {
+    name: packageName,
+    version: "0.0.0-dev",
+    repository: { url: repositoryUrl },
+    publishConfig: { registry: npmRegistry.url },
+  });
+  await writeJson(path.resolve(cwd, ".releaserc"), {
+    branches: ["master"],
+    tagFormat: "release-${version}",
+    plugins: [
+      ["@semantic-release/commit-analyzer", { releaseRules: [{ type: "docs", release: "patch" }] }],
+      ["@semantic-release/release-notes-generator"],
+      ["@semantic-release/npm", { npmPublish: false }],
+      ["@semantic-release/github", { successCommentCondition: false, failCommentCondition: false }],
+    ],
+  });
+
+  const verifyRepository = await mockRepository(packageName);
+  await gitCommits(["docs: configure release through releaserc"], { cwd });
+
+  const result = await executeCoreWithReleaseConfig(cwd, { dryRun: true });
+
+  t.is(result.nextRelease.type, "patch");
+  t.is(result.nextRelease.version, "1.0.0");
+  t.regex(result.nextRelease.notes, /# 1\.0\.0/);
+  t.is(result.nextRelease.gitTag, "release-1.0.0");
+  t.is((await readJson(path.resolve(cwd, "package.json"))).version, "0.0.0-dev");
+  await t.throwsAsync(gitTagHead("release-1.0.0", { cwd }));
+  t.is(await gitRemoteTagHead(authUrl, "release-1.0.0", { cwd }), undefined);
   await mockServer.verify(verifyRepository);
   await t.throwsAsync(npmView(packageName, npmTestEnv));
 });
