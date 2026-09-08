@@ -31,6 +31,7 @@ const pluginStack = [
   "@semantic-release/github",
 ];
 
+// Config-driven composition
 async function executeCore(cwd, options = {}) {
   const stdout = process.stdout;
   const stderr = process.stderr;
@@ -42,6 +43,19 @@ async function executeCore(cwd, options = {}) {
     { buildPlugins: true }
   );
   return directCore({ context: { ...context, options: resolvedOptions }, plugins });
+}
+
+// Direct composition
+async function executeCoreWithDirectPlugins(cwd, options = {}) {
+  const stdout = process.stdout;
+  const stderr = process.stderr;
+  const envCi = resolveEnvCi({ cwd, env });
+  const context = { cwd, env, envCi, stdout, stderr, logger: getLogger({ stdout, stderr }) };
+  const { options: resolvedOptions } = await resolveConfig(
+    context,
+    { ...options, successCommentCondition: false, failCommentCondition: false },
+  );
+  return directCore({ context: { ...context, options: resolvedOptions }, plugins: pluginStack });
 }
 
 async function mockRepository(repositoryName) {
@@ -91,7 +105,7 @@ test.after.always(async () => {
   await stopE2EEnvironment();
 });
 
-test.serial("core composes release notes, npm, and GitHub plugins for a real release", async (t) => {
+test.serial("core composes configured plugins for a real release", async (t) => {
   const packageName = "core-direct-composition";
   const { cwd, repositoryUrl, authUrl } = await gitbox.createRepo(packageName);
   await writeJson(path.resolve(cwd, "package.json"), {
@@ -139,7 +153,7 @@ test.serial("core composes release notes, npm, and GitHub plugins for a real rel
   await mockServer.verify(createPatchRelease);
 });
 
-test.serial("core composes plugins in dry-run mode without publishing", async (t) => {
+test.serial("core composes configured plugins in dry-run mode without publishing", async (t) => {
   const packageName = "core-direct-composition-dry-run";
   const { cwd, repositoryUrl, authUrl } = await gitbox.createRepo(packageName);
   await writeJson(path.resolve(cwd, "package.json"), {
@@ -157,6 +171,31 @@ test.serial("core composes plugins in dry-run mode without publishing", async (t
   t.is(result.nextRelease.type, "minor");
   t.is(result.nextRelease.version, "1.0.0");
   t.regex(result.nextRelease.notes, /generate dry-run notes/);
+  t.is((await readJson(path.resolve(cwd, "package.json"))).version, "0.0.0-dev");
+  await t.throwsAsync(gitTagHead("v1.0.0", { cwd }));
+  t.is(await gitRemoteTagHead(authUrl, "v1.0.0", { cwd }), undefined);
+  await mockServer.verify(verifyRepository);
+  await t.throwsAsync(npmView(packageName, npmTestEnv));
+});
+
+test.serial("core composes directly supplied plugins in dry-run mode", async (t) => {
+  const packageName = "core-direct-plugin-composition";
+  const { cwd, repositoryUrl, authUrl } = await gitbox.createRepo(packageName);
+  await writeJson(path.resolve(cwd, "package.json"), {
+    name: packageName,
+    version: "0.0.0-dev",
+    repository: { url: repositoryUrl },
+    publishConfig: { registry: npmRegistry.url },
+  });
+
+  const verifyRepository = await mockRepository(packageName);
+  await gitCommits(["feat: compose plugins directly"], { cwd });
+
+  const result = await executeCoreWithDirectPlugins(cwd, { branches: ["master"], dryRun: true });
+
+  t.is(result.nextRelease.type, "minor");
+  t.is(result.nextRelease.version, "1.0.0");
+  t.regex(result.nextRelease.notes, /compose plugins directly/);
   t.is((await readJson(path.resolve(cwd, "package.json"))).version, "0.0.0-dev");
   await t.throwsAsync(gitTagHead("v1.0.0", { cwd }));
   t.is(await gitRemoteTagHead(authUrl, "v1.0.0", { cwd }), undefined);
