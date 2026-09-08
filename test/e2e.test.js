@@ -1,3 +1,5 @@
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "ava";
 import { execa } from "execa";
@@ -248,6 +250,106 @@ test.serial("core composes plugins configured in .releaserc", async (t) => {
   t.is(await gitRemoteTagHead(authUrl, "release-1.0.0", { cwd }), undefined);
   await mockServer.verify(verifyRepository);
   await t.throwsAsync(npmView(packageName, npmTestEnv));
+});
+
+test.serial("core wrapper package applies baseConfig and consumer .releaserc overrides", async (t) => {
+  const packageName = "core-wrapper-consumer";
+  const { cwd, repositoryUrl, authUrl } = await gitbox.createRepo(packageName);
+  const packageRoot = path.resolve(".");
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "semantic-release-core-wrapper-"));
+  const wrapperPackageDirectory = path.join(fixtureRoot, "wrapper-package");
+  const wrapperPackDirectory = path.join(fixtureRoot, "wrapper-pack");
+  await mkdir(wrapperPackageDirectory, { recursive: true });
+  await mkdir(wrapperPackDirectory, { recursive: true });
+
+  const packedFiles = (
+    await execa("npm", ["pack", packageRoot, "--pack-destination", fixtureRoot, "--json"], {
+      cwd: packageRoot,
+    })
+  ).stdout;
+  const coreTarball = path.join(fixtureRoot, JSON.parse(packedFiles).at(-1).filename);
+
+  await writeJson(path.join(wrapperPackageDirectory, "package.json"), {
+    name: "core-test-wrapper",
+    version: "1.0.0",
+    type: "module",
+    files: ["index.js", "cli.js"],
+    bin: { "core-test-wrapper": "cli.js" },
+    dependencies: {
+      "@semantic-release/commit-analyzer": "^13.0.1",
+      "@semantic-release/release-notes-generator": "^14.1.1",
+    },
+    peerDependencies: { "@semantic-release/core": "*" },
+  });
+  await writeFile(
+    path.join(wrapperPackageDirectory, "index.js"),
+    `import semanticRelease, { getLogger, resolveConfig, resolveEnvCi } from "@semantic-release/core";
+
+export default async function run({ cwd = process.cwd(), env = process.env } = {}) {
+  const stdout = process.stdout;
+  const stderr = process.stderr;
+  const envCi = resolveEnvCi({ cwd, env });
+  const context = { cwd, env, envCi, stdout, stderr, logger: getLogger({ stdout, stderr }) };
+  const { options, plugins } = await resolveConfig(context, {}, {
+    buildPlugins: true,
+    baseConfig: {
+      branches: ["master"],
+      tagFormat: "wrapper-v\${version}",
+      plugins: ["@semantic-release/commit-analyzer", "@semantic-release/release-notes-generator"],
+    },
+  });
+  return semanticRelease({ context: { ...context, options }, plugins });
+}
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(wrapperPackageDirectory, "cli.js"),
+    `#!/usr/bin/env node
+import run from "./index.js";
+
+const result = await run({ env: process.env });
+console.log(JSON.stringify({ version: result.nextRelease.version, type: result.nextRelease.type, tag: result.nextRelease.gitTag }));
+`,
+    "utf8"
+  );
+
+  await execa("npm", ["pack", "--pack-destination", wrapperPackDirectory, "--json"], { cwd: wrapperPackageDirectory });
+  const wrapperPackOutput = await execa("npm", ["pack", "--pack-destination", wrapperPackDirectory, "--json"], {
+    cwd: wrapperPackageDirectory,
+  });
+  const wrapperTarball = path.join(wrapperPackDirectory, JSON.parse(wrapperPackOutput.stdout).at(-1).filename);
+  await writeJson(path.resolve(cwd, "package.json"), {
+    name: packageName,
+    version: "0.0.0-dev",
+    private: true,
+    repository: { url: repositoryUrl },
+    dependencies: {
+      "@semantic-release/commit-analyzer": "^13.0.1",
+      "@semantic-release/core": coreTarball,
+      "@semantic-release/release-notes-generator": "^14.1.1",
+    },
+  });
+  await execa("npm", ["install", coreTarball, wrapperTarball, "--ignore-scripts", "--no-package-lock"], { cwd });
+  await writeJson(path.resolve(cwd, ".releaserc"), {
+    tagFormat: "consumer-v${version}",
+    analyzeCommits: { releaseRules: [{ type: "docs", release: "patch" }] },
+  });
+  await gitCommits(["docs: configure wrapper release"], { cwd });
+
+  const { stdout } = await execa("npx", ["--no-install", "core-test-wrapper"], {
+    cwd,
+    env: { ...env, GITHUB_API_URL: undefined },
+    extendEnv: false,
+  });
+  const release = JSON.parse(stdout.trim().split("\n").at(-1));
+  const head = await gitHead({ cwd });
+
+  t.is(release.type, "patch");
+  t.is(release.version, "1.0.0");
+  t.is(release.tag, "consumer-v1.0.0");
+  t.is(await gitTagHead("consumer-v1.0.0", { cwd }), head);
+  t.is(await gitRemoteTagHead(authUrl, "consumer-v1.0.0", { cwd }), head);
 });
 
 async function npmView(packageName, environment) {
