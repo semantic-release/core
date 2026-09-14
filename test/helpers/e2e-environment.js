@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { GenericContainer, Wait } from "testcontainers";
-import got from "got";
 import pRetry from "p-retry";
 import yaml from "js-yaml";
 import { mockServerClient } from "mockserver-client";
@@ -35,6 +34,15 @@ function requireContainer(container, name) {
 
 function serviceUrl(container, port, trailingSlash = false) {
   return `http://${container.getHost()}:${container.getMappedPort(port)}${trailingSlash ? "/" : ""}`;
+}
+
+async function fetchOrThrow(url, options) {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
+  }
+
+  return response;
 }
 
 export const gitbox = {
@@ -119,24 +127,27 @@ export async function startE2EEnvironment() {
     mockServerContainer.getMappedPort(MOCK_SERVER_PORT)
   );
 
-  await got(`${npmRegistry.url}-/user/org.couchdb.user:${NPM_USERNAME}`, {
+  await fetchOrThrow(`${npmRegistry.url}-/user/org.couchdb.user:${NPM_USERNAME}`, {
     method: "PUT",
-    json: {
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
       _id: `org.couchdb.user:${NPM_USERNAME}`,
       name: NPM_USERNAME,
       roles: [],
       type: "user",
       password: NPM_PASSWORD,
       email: NPM_EMAIL,
-    },
+    }),
   });
-  ({ token: npmToken } = await got(`${npmRegistry.url}-/npm/v1/tokens`, {
-    username: NPM_USERNAME,
-    password: NPM_PASSWORD,
+  const tokenResponse = await fetchOrThrow(`${npmRegistry.url}-/npm/v1/tokens`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    json: { password: NPM_PASSWORD, readonly: false, cidr_whitelist: [] },
-  }).json());
+    headers: {
+      authorization: `Basic ${Buffer.from(`${NPM_USERNAME}:${NPM_PASSWORD}`).toString("base64")}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ password: NPM_PASSWORD, readonly: false, cidr_whitelist: [] }),
+  });
+  ({ token: npmToken } = await tokenResponse.json());
 }
 
 export async function stopE2EEnvironment() {
