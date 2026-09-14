@@ -2,6 +2,11 @@ import test from "ava";
 import envCi from "env-ci";
 import { escapeRegExp } from "lodash-es";
 
+import directCore, {
+  getLogger as getDirectCoreLogger,
+  resolveConfig as resolveDirectCoreConfig,
+  resolveEnvCi,
+} from "@semantic-release/core";
 import semanticRelease from "../index.js";
 import resolveConfig from "../lib/resolve-config.js";
 import getLogger from "../lib/get-logger.js";
@@ -40,6 +45,26 @@ async function executeCoreWithInput(runtimeOptions, { cwd, env, stdout, stderr }
 
   return semanticRelease({ context, plugins, onInit: undefined, ...semanticReleaseInput });
 }
+
+test.serial("core can be consumed directly with its default commit analyzer", async (t) => {
+  const { cwd } = await gitRepo(true);
+  const env = createCiEnv("master");
+  const stdout = process.stdout;
+  const stderr = process.stderr;
+  const envCi = resolveEnvCi({ cwd, env });
+  const logger = getDirectCoreLogger({ stdout, stderr });
+  const context = { cwd, env, envCi, logger, stdout, stderr };
+
+  await gitCommits(["feat: add direct core consumer test"], { cwd });
+
+  const { options, plugins } = await resolveDirectCoreConfig(context, { branches: ["master"] }, { buildPlugins: true });
+  const result = await directCore({ context: { ...context, options }, plugins });
+
+  t.is(result.nextRelease.type, "minor");
+  t.is(result.nextRelease.version, "1.0.0");
+  t.true(result.commits.some(({ message }) => message === "feat: add direct core consumer test"));
+  t.is(await gitTagHead("v1.0.0", { cwd }), result.nextRelease.gitHead);
+});
 
 test.serial("core runs a custom plugin stack in dry-run mode without creating a tag", async (t) => {
   const { cwd } = await gitRepo(true);
