@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: git config --global user.name github-actions
       - run: git config --global user.email github-actions@github.com
       - name: Use Node.js ${{ matrix.node-version }}
@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: git config --global user.name github-actions
       - run: git config --global user.email github-actions@github.com
       - name: Use Node.js from .nvmrc
