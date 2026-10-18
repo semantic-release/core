@@ -97,7 +97,7 @@
     "@semantic-release/github": "12.0.9",
     "@semantic-release/npm": "13.1.5",
     "@semantic-release/release-notes-generator": "14.1.1",
-    "ava": "8.0.1",
+    "ava": "8.0.2",
     "fs-extra": "11.4.1",
     "js-yaml": "4.3.2",
     "lockfile-lint": "5.1.0",
