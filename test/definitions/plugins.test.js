@@ -1,74 +1,78 @@
-import test from "ava";
+import { expect, it } from "vitest";
 import plugins from "../../lib/definitions/plugins.js";
 import { RELEASE_NOTES_SEPARATOR, SECRET_REPLACEMENT } from "../../lib/definitions/constants.js";
 
-test('The "analyzeCommits" plugin output must be either undefined or a valid semver release type', (t) => {
-  t.false(plugins.analyzeCommits.outputValidator("invalid"));
-  t.false(plugins.analyzeCommits.outputValidator(1));
-  t.false(plugins.analyzeCommits.outputValidator({}));
+it('The "analyzeCommits" plugin output must be either undefined or a valid semver release type', (t) => {
+  expect(plugins.analyzeCommits.outputValidator("invalid")).toBe(false);
+  expect(plugins.analyzeCommits.outputValidator(1)).toBe(false);
+  expect(plugins.analyzeCommits.outputValidator({})).toBe(false);
 
-  t.true(plugins.analyzeCommits.outputValidator());
-  t.true(plugins.analyzeCommits.outputValidator(null));
-  t.true(plugins.analyzeCommits.outputValidator("major"));
+  expect(plugins.analyzeCommits.outputValidator()).toBe(true);
+  expect(plugins.analyzeCommits.outputValidator(null)).toBe(true);
+  expect(plugins.analyzeCommits.outputValidator("major")).toBe(true);
 });
 
-test('The "generateNotes" plugin output, if defined, must be a string', (t) => {
-  t.false(plugins.generateNotes.outputValidator(1));
-  t.false(plugins.generateNotes.outputValidator({}));
+it('The "generateNotes" plugin output, if defined, must be a string', (t) => {
+  expect(plugins.generateNotes.outputValidator(1)).toBe(false);
+  expect(plugins.generateNotes.outputValidator({})).toBe(false);
 
-  t.true(plugins.generateNotes.outputValidator());
-  t.true(plugins.generateNotes.outputValidator(null));
-  t.true(plugins.generateNotes.outputValidator(""));
-  t.true(plugins.generateNotes.outputValidator("string"));
+  expect(plugins.generateNotes.outputValidator()).toBe(true);
+  expect(plugins.generateNotes.outputValidator(null)).toBe(true);
+  expect(plugins.generateNotes.outputValidator("")).toBe(true);
+  expect(plugins.generateNotes.outputValidator("string")).toBe(true);
 });
 
-test('The "publish" plugin output, if defined, must be an object or "false"', (t) => {
-  t.false(plugins.publish.outputValidator(1));
-  t.false(plugins.publish.outputValidator("string"));
+it('The "publish" plugin output, if defined, must be an object or "false"', (t) => {
+  expect(plugins.publish.outputValidator(1)).toBe(false);
+  expect(plugins.publish.outputValidator("string")).toBe(false);
 
-  t.true(plugins.publish.outputValidator({}));
-  t.true(plugins.publish.outputValidator());
-  t.true(plugins.publish.outputValidator(null));
-  t.true(plugins.publish.outputValidator(""));
-  t.true(plugins.publish.outputValidator(false));
+  expect(plugins.publish.outputValidator({})).toBe(true);
+  expect(plugins.publish.outputValidator()).toBe(true);
+  expect(plugins.publish.outputValidator(null)).toBe(true);
+  expect(plugins.publish.outputValidator("")).toBe(true);
+  expect(plugins.publish.outputValidator(false)).toBe(true);
 });
 
-test('The "addChannel" plugin output, if defined, must be an object', (t) => {
-  t.false(plugins.addChannel.outputValidator(1));
-  t.false(plugins.addChannel.outputValidator("string"));
+it('The "addChannel" plugin output, if defined, must be an object', (t) => {
+  expect(plugins.addChannel.outputValidator(1)).toBe(false);
+  expect(plugins.addChannel.outputValidator("string")).toBe(false);
 
-  t.true(plugins.addChannel.outputValidator({}));
-  t.true(plugins.addChannel.outputValidator());
-  t.true(plugins.addChannel.outputValidator(null));
-  t.true(plugins.addChannel.outputValidator(""));
+  expect(plugins.addChannel.outputValidator({})).toBe(true);
+  expect(plugins.addChannel.outputValidator()).toBe(true);
+  expect(plugins.addChannel.outputValidator(null)).toBe(true);
+  expect(plugins.addChannel.outputValidator("")).toBe(true);
 });
 
-test('The "generateNotes" plugins output are concatenated with separator and sensitive data is hidden', (t) => {
+it('The "generateNotes" plugins output are concatenated with separator and sensitive data is hidden', (t) => {
   const env = { MY_TOKEN: "secret token" };
-  t.is(plugins.generateNotes.postprocess(["note 1", "note 2"], { env }), `note 1${RELEASE_NOTES_SEPARATOR}note 2`);
-  t.is(plugins.generateNotes.postprocess(["", "note"], { env }), "note");
-  t.is(plugins.generateNotes.postprocess([undefined, "note"], { env }), "note");
-  t.is(plugins.generateNotes.postprocess(["note 1", "", "note 2"], { env }), `note 1${RELEASE_NOTES_SEPARATOR}note 2`);
-  t.is(
-    plugins.generateNotes.postprocess(["note 1", undefined, "note 2"], { env }),
+  expect(plugins.generateNotes.postprocess(["note 1", "note 2"], { env })).toBe(
+    `note 1${RELEASE_NOTES_SEPARATOR}note 2`
+  );
+  expect(plugins.generateNotes.postprocess(["", "note"], { env })).toBe("note");
+  expect(plugins.generateNotes.postprocess([undefined, "note"], { env })).toBe("note");
+  expect(plugins.generateNotes.postprocess(["note 1", "", "note 2"], { env })).toBe(
+    `note 1${RELEASE_NOTES_SEPARATOR}note 2`
+  );
+  expect(plugins.generateNotes.postprocess(["note 1", undefined, "note 2"], { env })).toBe(
     `note 1${RELEASE_NOTES_SEPARATOR}note 2`
   );
 
-  t.is(
+  expect(
     plugins.generateNotes.postprocess(
       [`Note 1: Exposing token ${env.MY_TOKEN}`, `Note 2: Exposing token ${SECRET_REPLACEMENT}`],
       { env }
-    ),
+    )
+  ).toBe(
     `Note 1: Exposing token ${SECRET_REPLACEMENT}${RELEASE_NOTES_SEPARATOR}Note 2: Exposing token ${SECRET_REPLACEMENT}`
   );
 });
 
-test('The "analyzeCommits" plugins output are reduced to the highest release type', (t) => {
-  t.is(plugins.analyzeCommits.postprocess(["major", "minor"]), "major");
-  t.is(plugins.analyzeCommits.postprocess(["", "minor"]), "minor");
-  t.is(plugins.analyzeCommits.postprocess([undefined, "patch"]), "patch");
-  t.is(plugins.analyzeCommits.postprocess([null, "patch"]), "patch");
-  t.is(plugins.analyzeCommits.postprocess(["wrong_type", "minor"]), "minor");
-  t.is(plugins.analyzeCommits.postprocess([]), undefined);
-  t.is(plugins.analyzeCommits.postprocess(["wrong_type"]), undefined);
+it('The "analyzeCommits" plugins output are reduced to the highest release type', (t) => {
+  expect(plugins.analyzeCommits.postprocess(["major", "minor"])).toBe("major");
+  expect(plugins.analyzeCommits.postprocess(["", "minor"])).toBe("minor");
+  expect(plugins.analyzeCommits.postprocess([undefined, "patch"])).toBe("patch");
+  expect(plugins.analyzeCommits.postprocess([null, "patch"])).toBe("patch");
+  expect(plugins.analyzeCommits.postprocess(["wrong_type", "minor"])).toBe("minor");
+  expect(plugins.analyzeCommits.postprocess([])).toBe(undefined);
+  expect(plugins.analyzeCommits.postprocess(["wrong_type"])).toBe(undefined);
 });
