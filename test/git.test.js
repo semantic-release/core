@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import test from "ava";
+import { expect, it } from "vitest";
+import getError from "./helpers/get-error.js";
 import { temporaryDirectory } from "tempy";
 import {
   addNote,
@@ -38,34 +39,34 @@ import {
   initGit,
 } from "./helpers/git-utils.js";
 
-test("Get the last commit sha", async (t) => {
+it("Get the last commit sha", async (t) => {
   const { cwd } = await gitRepo();
   const commits = await gitCommits(["First"], { cwd });
 
   const result = await getGitHead({ cwd });
 
-  t.is(result, commits[0].hash);
+  expect(result).toBe(commits[0].hash);
 });
 
-test("Throw error if the last commit sha cannot be found", async (t) => {
+it("Throw error if the last commit sha cannot be found", async (t) => {
   const { cwd } = await gitRepo();
 
-  await t.throwsAsync(getGitHead({ cwd }));
+  await getError(getGitHead({ cwd }));
 });
 
-test("Unshallow and fetch repository", async (t) => {
+it("Unshallow and fetch repository", async (t) => {
   let { cwd, repositoryUrl } = await gitRepo();
   await gitCommits(["First", "Second"], { cwd });
   cwd = await gitShallowClone(repositoryUrl);
 
-  t.is((await gitGetCommits(undefined, { cwd })).length, 1);
+  expect((await gitGetCommits(undefined, { cwd })).length).toBe(1);
 
   await fetch(repositoryUrl, "master", "master", { cwd });
 
-  t.is((await gitGetCommits(undefined, { cwd })).length, 2);
+  expect((await gitGetCommits(undefined, { cwd })).length).toBe(2);
 });
 
-test("Do not throw error when unshallow a complete repository", async (t) => {
+it("Do not throw error when unshallow a complete repository", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
   await gitCommits(["First"], { cwd });
   await gitPush(repositoryUrl, "master", { cwd });
@@ -73,11 +74,11 @@ test("Do not throw error when unshallow a complete repository", async (t) => {
   await gitCommits(["Second"], { cwd });
   await gitPush(repositoryUrl, "second-branch", { cwd });
 
-  await t.notThrowsAsync(fetch(repositoryUrl, "master", "master", { cwd }));
-  await t.notThrowsAsync(fetch(repositoryUrl, "second-branch", "master", { cwd }));
+  await fetch(repositoryUrl, "master", "master", { cwd });
+  await fetch(repositoryUrl, "second-branch", "master", { cwd });
 });
 
-test("Fetch all tags on a detached head repository", async (t) => {
+it("Fetch all tags on a detached head repository", async (t) => {
   let { cwd, repositoryUrl } = await gitRepo();
 
   await gitCommits(["First"], { cwd });
@@ -91,10 +92,10 @@ test("Fetch all tags on a detached head repository", async (t) => {
 
   await fetch(repositoryUrl, "master", "master", { cwd });
 
-  t.deepEqual((await getTags("master", { cwd })).sort(), ["v1.0.0", "v1.0.1", "v1.1.0"].sort());
+  expect((await getTags("master", { cwd })).sort()).toEqual(["v1.0.0", "v1.0.1", "v1.1.0"].sort());
 });
 
-test("Fetch all tags on a repository with a detached head from branch (CircleCI)", async (t) => {
+it("Fetch all tags on a repository with a detached head from branch (CircleCI)", async (t) => {
   let { cwd, repositoryUrl } = await gitRepo();
 
   await gitCommits(["First"], { cwd });
@@ -115,11 +116,11 @@ test("Fetch all tags on a repository with a detached head from branch (CircleCI)
   await fetch(repositoryUrl, "master", "other-branch", { cwd });
   await fetch(repositoryUrl, "other-branch", "other-branch", { cwd });
 
-  t.deepEqual((await getTags("other-branch", { cwd })).sort(), ["v1.0.0", "v1.0.1", "v1.1.0"].sort());
-  t.deepEqual((await getTags("master", { cwd })).sort(), ["v1.0.0", "v1.0.1", "v1.1.0", "v2.0.0"].sort());
+  expect((await getTags("other-branch", { cwd })).sort()).toEqual(["v1.0.0", "v1.0.1", "v1.1.0"].sort());
+  expect((await getTags("master", { cwd })).sort()).toEqual(["v1.0.0", "v1.0.1", "v1.1.0", "v2.0.0"].sort());
 });
 
-test("Fetch all tags on a detached head repository with outdated cached repo (GitLab CI)", async (t) => {
+it("Fetch all tags on a detached head repository with outdated cached repo (GitLab CI)", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo();
 
   await gitCommits(["First"], { cwd });
@@ -141,21 +142,21 @@ test("Fetch all tags on a detached head repository with outdated cached repo (Gi
   await fetch(repositoryUrl, "master", "master", { cwd: cloneCwd });
   await gitCheckout(commit.hash, false, { cwd: cloneCwd });
 
-  t.deepEqual((await getTags("master", { cwd: cloneCwd })).sort(), ["v1.0.0", "v1.0.1", "v1.1.0", "v1.2.0"].sort());
+  expect((await getTags("master", { cwd: cloneCwd })).sort()).toEqual(["v1.0.0", "v1.0.1", "v1.1.0", "v1.2.0"].sort());
 });
 
-test("Verify if a branch exists", async (t) => {
+it("Verify if a branch exists", async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
   await gitCheckout("other-branch", true, { cwd });
   await gitCommits(["Second"], { cwd });
 
-  t.true(await isRefExists("master", { cwd }));
-  t.true(await isRefExists("other-branch", { cwd }));
-  t.falsy(await isRefExists("next", { cwd }));
+  expect(await isRefExists("master", { cwd })).toBe(true);
+  expect(await isRefExists("other-branch", { cwd })).toBe(true);
+  expect(await isRefExists("next", { cwd })).toBeFalsy();
 });
 
-test("Get all branches", async (t) => {
+it("Get all branches", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
   await gitCommits(["First"], { cwd });
   await gitPush(repositoryUrl, "master", { cwd });
@@ -166,63 +167,65 @@ test("Get all branches", async (t) => {
   await gitCommits(["Third"], { cwd });
   await gitPush(repositoryUrl, "third-branch", { cwd });
 
-  t.deepEqual((await getBranches(repositoryUrl, { cwd })).sort(), ["master", "second-branch", "third-branch"].sort());
+  expect((await getBranches(repositoryUrl, { cwd })).sort()).toEqual(
+    ["master", "second-branch", "third-branch"].sort()
+  );
 });
 
-test("Return empty array if there are no branches", async (t) => {
+it("Return empty array if there are no branches", async (t) => {
   const { cwd, repositoryUrl } = await initGit(true);
-  t.deepEqual(await getBranches(repositoryUrl, { cwd }), []);
+  expect(await getBranches(repositoryUrl, { cwd })).toEqual([]);
 });
 
-test("Get the commit sha for a given tag", async (t) => {
+it("Get the commit sha for a given tag", async (t) => {
   const { cwd } = await gitRepo();
   const commits = await gitCommits(["First"], { cwd });
   await gitTagVersion("v1.0.0", undefined, { cwd });
 
-  t.is(await getTagHead("v1.0.0", { cwd }), commits[0].hash);
+  expect(await getTagHead("v1.0.0", { cwd })).toBe(commits[0].hash);
 });
 
-test("Return git remote repository url from config", async (t) => {
+it("Return git remote repository url from config", async (t) => {
   const { cwd } = await gitRepo();
   await gitAddConfig("remote.origin.url", "git@hostname.com:owner/package.git", { cwd });
 
-  t.is(await repoUrl({ cwd }), "git@hostname.com:owner/package.git");
+  expect(await repoUrl({ cwd })).toBe("git@hostname.com:owner/package.git");
 });
 
-test("Return git remote repository url set while cloning", async (t) => {
+it("Return git remote repository url set while cloning", async (t) => {
   let { cwd, repositoryUrl } = await gitRepo();
   await gitCommits(["First"], { cwd });
   cwd = await gitShallowClone(repositoryUrl);
 
-  t.is(await repoUrl({ cwd }), repositoryUrl);
+  expect(await repoUrl({ cwd })).toBe(repositoryUrl);
 });
 
-test("Return falsy if git repository url is not set", async (t) => {
+it("Return falsy if git repository url is not set", async (t) => {
   const { cwd } = await gitRepo();
 
-  t.falsy(await repoUrl({ cwd }));
+  expect(await repoUrl({ cwd })).toBeFalsy();
 });
 
-test("Add tag on head commit", async (t) => {
+it("Add tag on head commit", async (t) => {
   const { cwd } = await gitRepo();
   const commits = await gitCommits(["Test commit"], { cwd });
 
   await tag("tag_name", "HEAD", { cwd });
 
-  await t.is(await gitCommitTag(commits[0].hash, { cwd }), "tag_name");
+  await expect(await gitCommitTag(commits[0].hash, { cwd })).toBe("tag_name");
 });
 
-test("Push tag to remote repository", async (t) => {
+it("Push tag to remote repository", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
   const commits = await gitCommits(["Test commit"], { cwd });
 
   await tag("tag_name", "HEAD", { cwd });
   await push(repositoryUrl, { cwd });
 
-  t.is(await gitRemoteTagHead(repositoryUrl, "tag_name", { cwd }), commits[0].hash);
+  expect(await gitRemoteTagHead(repositoryUrl, "tag_name", { cwd })).toBe(commits[0].hash);
 });
 
-test("Push tag to remote repository with remote branch ahead", async (t) => {
+it("Push tag to remote repository with remote branch ahead", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
   const commits = await gitCommits(["First"], { cwd });
   await gitPush(repositoryUrl, "master", { cwd });
@@ -233,65 +236,65 @@ test("Push tag to remote repository with remote branch ahead", async (t) => {
   await tag("tag_name", "HEAD", { cwd });
   await push(repositoryUrl, { cwd });
 
-  t.is(await gitRemoteTagHead(repositoryUrl, "tag_name", { cwd }), commits[0].hash);
+  expect(await gitRemoteTagHead(repositoryUrl, "tag_name", { cwd })).toBe(commits[0].hash);
 });
 
-test('Return "true" if in a Git repository', async (t) => {
+it('Return "true" if in a Git repository', async (t) => {
   const { cwd } = await gitRepo(true);
 
-  t.true(await isGitRepo({ cwd }));
+  expect(await isGitRepo({ cwd })).toBe(true);
 });
 
-test("Return falsy if not in a Git repository", async (t) => {
+it("Return falsy if not in a Git repository", async (t) => {
   const cwd = temporaryDirectory();
 
-  t.falsy(await isGitRepo({ cwd }));
+  expect(await isGitRepo({ cwd })).toBeFalsy();
 });
 
-test('Return "true" for valid tag names', async (t) => {
-  t.true(await verifyTagName("1.0.0"));
-  t.true(await verifyTagName("v1.0.0"));
-  t.true(await verifyTagName("tag_name"));
-  t.true(await verifyTagName("tag/name"));
+it('Return "true" for valid tag names', async (t) => {
+  expect(await verifyTagName("1.0.0")).toBe(true);
+  expect(await verifyTagName("v1.0.0")).toBe(true);
+  expect(await verifyTagName("tag_name")).toBe(true);
+  expect(await verifyTagName("tag/name")).toBe(true);
 });
 
-test("Return falsy for invalid tag names", async (t) => {
-  t.falsy(await verifyTagName("?1.0.0"));
-  t.falsy(await verifyTagName("*1.0.0"));
-  t.falsy(await verifyTagName("[1.0.0]"));
-  t.falsy(await verifyTagName("1.0.0.."));
+it("Return falsy for invalid tag names", async (t) => {
+  expect(await verifyTagName("?1.0.0")).toBeFalsy();
+  expect(await verifyTagName("*1.0.0")).toBeFalsy();
+  expect(await verifyTagName("[1.0.0]")).toBeFalsy();
+  expect(await verifyTagName("1.0.0..")).toBeFalsy();
 });
 
-test("Throws error if obtaining the tags fails", async (t) => {
+it("Throws error if obtaining the tags fails", async (t) => {
   const cwd = temporaryDirectory();
 
-  await t.throwsAsync(getTags("master", { cwd }));
+  await getError(getTags("master", { cwd }));
 });
 
-test('Return "true" if repository is up to date', async (t) => {
+it('Return "true" if repository is up to date', async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
   await gitCommits(["First"], { cwd });
   await gitPush(repositoryUrl, "master", { cwd });
 
-  t.true(await isBranchUpToDate(repositoryUrl, "master", { cwd }));
+  expect(await isBranchUpToDate(repositoryUrl, "master", { cwd })).toBe(true);
 });
 
-test("Return falsy if repository is not up to date", async (t) => {
+it("Return falsy if repository is not up to date", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
   await gitCommits(["First"], { cwd });
   await gitCommits(["Second"], { cwd });
   await gitPush(repositoryUrl, "master", { cwd });
 
-  t.true(await isBranchUpToDate(repositoryUrl, "master", { cwd }));
+  expect(await isBranchUpToDate(repositoryUrl, "master", { cwd })).toBe(true);
 
   const temporaryRepo = await gitShallowClone(repositoryUrl);
   await gitCommits(["Third"], { cwd: temporaryRepo });
   await gitPush("origin", "master", { cwd: temporaryRepo });
 
-  t.falsy(await isBranchUpToDate(repositoryUrl, "master", { cwd }));
+  expect(await isBranchUpToDate(repositoryUrl, "master", { cwd })).toBeFalsy();
 });
 
-test("Return falsy if detached head repository is not up to date", async (t) => {
+it("Return falsy if detached head repository is not up to date", async (t) => {
   let { cwd, repositoryUrl } = await gitRepo();
 
   const [commit] = await gitCommits(["First"], { cwd });
@@ -300,10 +303,10 @@ test("Return falsy if detached head repository is not up to date", async (t) => 
   cwd = await gitDetachedHead(repositoryUrl, commit.hash);
   await fetch(repositoryUrl, "master", "master", { cwd });
 
-  t.falsy(await isBranchUpToDate(repositoryUrl, "master", { cwd }));
+  expect(await isBranchUpToDate(repositoryUrl, "master", { cwd })).toBeFalsy();
 });
 
-test("Get a commit note", async (t) => {
+it("Get a commit note", async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
   await gitTagVersion("v1.0.0", undefined, { cwd });
@@ -311,20 +314,20 @@ test("Get a commit note", async (t) => {
   await gitAddNote(JSON.stringify({ note: "note" }), "v1.0.0", { cwd });
   const tagsNotes = await getTagsNotes({ cwd });
 
-  t.deepEqual(tagsNotes.get("v1.0.0"), { note: "note" });
+  expect(tagsNotes.get("v1.0.0")).toEqual({ note: "note" });
 });
 
-test("Return undefined if there is no commit note", async (t) => {
+it("Return undefined if there is no commit note", async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
   await gitTagVersion("v1.0.0", undefined, { cwd });
 
   const tagsNotes = await getTagsNotes({ cwd });
 
-  t.deepEqual(tagsNotes.get("v1.0.0"), undefined);
+  expect(tagsNotes.get("v1.0.0")).toEqual(undefined);
 });
 
-test("Return undefined if a commit note is invalid", async (t) => {
+it("Return undefined if a commit note is invalid", async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
   await gitTagVersion("v1.0.0", undefined, { cwd });
@@ -333,43 +336,43 @@ test("Return undefined if a commit note is invalid", async (t) => {
 
   const tagsNotes = await getTagsNotes({ cwd });
 
-  t.deepEqual(tagsNotes.get("v1.0.0"), undefined);
+  expect(tagsNotes.get("v1.0.0")).toEqual(undefined);
 });
 
-test("Add a commit note", async (t) => {
+it("Add a commit note", async (t) => {
   const { cwd } = await gitRepo();
   const commits = await gitCommits(["First"], { cwd });
 
   await addNote({ note: "note" }, commits[0].hash, { cwd });
 
-  t.is(await gitGetNote(commits[0].hash, { cwd }), '{"note":"note"}');
+  expect(await gitGetNote(commits[0].hash, { cwd })).toBe('{"note":"note"}');
 });
 
-test("Overwrite a commit note", async (t) => {
+it("Overwrite a commit note", async (t) => {
   const { cwd } = await gitRepo();
   const commits = await gitCommits(["First"], { cwd });
 
   await addNote({ note: "note" }, commits[0].hash, { cwd });
   await addNote({ note: "note2" }, commits[0].hash, { cwd });
 
-  t.is(await gitGetNote(commits[0].hash, { cwd }), '{"note":"note2"}');
+  expect(await gitGetNote(commits[0].hash, { cwd })).toBe('{"note":"note2"}');
 });
 
-test("Unshallow and fetch repository with notes", async (t) => {
+it("Unshallow and fetch repository with notes", async (t) => {
   let { cwd, repositoryUrl } = await gitRepo();
   const commits = await gitCommits(["First", "Second"], { cwd });
   await gitAddNote(JSON.stringify({ note: "note" }), commits[0].hash, { cwd });
   cwd = await gitShallowClone(repositoryUrl);
 
-  await t.throwsAsync(gitGetNote(commits[0].hash, { cwd }));
+  await getError(gitGetNote(commits[0].hash, { cwd }));
 
   await fetch(repositoryUrl, "master", "master", { cwd });
   await fetchNotes(repositoryUrl, { cwd });
 
-  t.is(await gitGetNote(commits[0].hash, { cwd }), '{"note":"note"}');
+  expect(await gitGetNote(commits[0].hash, { cwd })).toBe('{"note":"note"}');
 });
 
-test("Fetch all notes on a detached head repository", async (t) => {
+it("Fetch all notes on a detached head repository", async (t) => {
   let { cwd, repositoryUrl } = await gitRepo();
 
   await gitCommits(["First"], { cwd });
@@ -381,10 +384,10 @@ test("Fetch all notes on a detached head repository", async (t) => {
   await fetch(repositoryUrl, "master", "master", { cwd });
   await fetchNotes(repositoryUrl, { cwd });
 
-  t.is(await gitGetNote(commit.hash, { cwd }), '{"note":"note"}');
+  expect(await gitGetNote(commit.hash, { cwd })).toBe('{"note":"note"}');
 });
 
-test("Does not execute a `repositoryUrl` injected as an `--upload-pack` git option", async (t) => {
+it("Does not execute a `repositoryUrl` injected as an `--upload-pack` git option", async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
   const marker = path.join(temporaryDirectory(), "upload-pack-rce");
@@ -393,12 +396,12 @@ test("Does not execute a `repositoryUrl` injected as an `--upload-pack` git opti
   // lets the injected value run an arbitrary binary when fetching refs.
   const repositoryUrl = `--upload-pack=touch ${marker}`;
 
-  await t.throwsAsync(isBranchUpToDate(repositoryUrl, "master", { cwd }));
+  await getError(isBranchUpToDate(repositoryUrl, "master", { cwd }));
 
-  t.false(existsSync(marker));
+  expect(existsSync(marker)).toBe(false);
 });
 
-test("Does not execute a `repositoryUrl` injected as a `--receive-pack` git option", async (t) => {
+it("Does not execute a `repositoryUrl` injected as a `--receive-pack` git option", async (t) => {
   const { cwd } = await gitRepo(true);
   await gitCommits(["First"], { cwd });
   const marker = path.join(temporaryDirectory(), "receive-pack-rce");
@@ -406,7 +409,7 @@ test("Does not execute a `repositoryUrl` injected as a `--receive-pack` git opti
   // run an arbitrary binary when pushing to the (configured) remote.
   const repositoryUrl = `--receive-pack=touch ${marker}`;
 
-  await t.throwsAsync(push(repositoryUrl, { cwd }));
+  await getError(push(repositoryUrl, { cwd }));
 
-  t.false(existsSync(marker));
+  expect(existsSync(marker)).toBe(false);
 });

@@ -1,4 +1,4 @@
-import test from "ava";
+import { expect, it } from "vitest";
 import * as errors from "../../lib/definitions/errors.js";
 
 const docsRelatedErrors = [
@@ -48,20 +48,20 @@ const docsRelatedErrors = [
 const docsBaseUrl = "https://semantic-release.org";
 
 const assertErrorShape = (t, error, { messageIncludes, detailsIncludes }) => {
-  t.truthy(error);
-  t.is(typeof error.message, "string");
-  t.is(typeof error.details, "string");
+  expect(error).toBeTruthy();
+  expect(typeof error.message).toBe("string");
+  expect(typeof error.details).toBe("string");
 
   if (messageIncludes) {
-    t.true(error.message.includes(messageIncludes));
+    expect(error.message.includes(messageIncludes)).toBe(true);
   }
 
   for (const expected of detailsIncludes ?? []) {
-    t.true(error.details.includes(expected));
+    expect(error.details.includes(expected)).toBe(true);
   }
 };
 
-test("Every exported error factory returns a structured error payload", (t) => {
+it("Every exported error factory returns a structured error payload", (t) => {
   const cases = [
     { error: errors.ENOGITREPO({ cwd: "/repo" }), messageIncludes: "git repository", detailsIncludes: ["/repo"] },
     {

@@ -1,8 +1,8 @@
-import test from "ava";
+import { expect, it } from "vitest";
 import { spy } from "sinon";
 import getLogger from "../lib/get-logger.js";
 
-test('Expose "start", "skip", "complete", "error", "success", "warn" and "log" functions', (t) => {
+it('Expose "start", "skip", "complete", "error", "success", "warn" and "log" functions', (t) => {
   const stdout = spy();
   const stderr = spy();
   const logger = getLogger({ stdout: { write: stdout }, stderr: { write: stderr } });
@@ -15,11 +15,11 @@ test('Expose "start", "skip", "complete", "error", "success", "warn" and "log" f
   logger.error("test error");
   logger.warn("test warn");
 
-  t.regex(stdout.args[0][0], /.*test start/);
-  t.regex(stdout.args[1][0], /.*test skip/);
-  t.regex(stdout.args[2][0], /.*test complete/);
-  t.regex(stdout.args[3][0], /.*test log/);
-  t.regex(stdout.args[4][0], /.*test success/);
-  t.regex(stderr.args[0][0], /.*test error/);
-  t.regex(stderr.args[1][0], /.*test warn/);
+  expect(stdout.args[0][0]).toMatch(/.*test start/);
+  expect(stdout.args[1][0]).toMatch(/.*test skip/);
+  expect(stdout.args[2][0]).toMatch(/.*test complete/);
+  expect(stdout.args[3][0]).toMatch(/.*test log/);
+  expect(stdout.args[4][0]).toMatch(/.*test success/);
+  expect(stderr.args[0][0]).toMatch(/.*test error/);
+  expect(stderr.args[1][0]).toMatch(/.*test warn/);
 });

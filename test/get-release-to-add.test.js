@@ -1,7 +1,7 @@
-import test from "ava";
+import { expect, it } from "vitest";
 import getReleaseToAdd from "../lib/get-release-to-add.js";
 
-test("Return versions merged from release to maintenance branch, excluding lower than branch start range", (t) => {
+it("Return versions merged from release to maintenance branch, excluding lower than branch start range", (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "2.x",
@@ -21,7 +21,7 @@ test("Return versions merged from release to maintenance branch, excluding lower
     options: { tagFormat: `v\${version}` },
   });
 
-  t.deepEqual(result, {
+  expect(result).toEqual({
     lastRelease: { version: "2.1.0", channels: [null], gitTag: "v2.1.0", name: "v2.1.0", gitHead: "v2.1.0" },
     currentRelease: {
       type: "patch",
@@ -42,7 +42,7 @@ test("Return versions merged from release to maintenance branch, excluding lower
   });
 });
 
-test("Return versions merged between release branches", (t) => {
+it("Return versions merged between release branches", (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "master",
@@ -56,7 +56,7 @@ test("Return versions merged between release branches", (t) => {
     options: { tagFormat: `v\${version}` },
   });
 
-  t.deepEqual(result, {
+  expect(result).toEqual({
     lastRelease: {
       version: "1.1.0",
       gitTag: "v1.1.0",
@@ -83,7 +83,7 @@ test("Return versions merged between release branches", (t) => {
   });
 });
 
-test("Return releases sorted by ascending order", (t) => {
+it("Return releases sorted by ascending order", (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "master",
@@ -97,7 +97,7 @@ test("Return releases sorted by ascending order", (t) => {
     options: { tagFormat: `v\${version}` },
   });
 
-  t.deepEqual(result, {
+  expect(result).toEqual({
     lastRelease: { version: "1.1.0", gitTag: "v1.1.0", name: "v1.1.0", gitHead: "v1.1.0", channels: ["next"] },
     currentRelease: {
       type: "major",
@@ -118,7 +118,7 @@ test("Return releases sorted by ascending order", (t) => {
   });
 });
 
-test("No lastRelease", (t) => {
+it("No lastRelease", (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "master",
@@ -128,7 +128,7 @@ test("No lastRelease", (t) => {
     options: { tagFormat: `v\${version}` },
   });
 
-  t.deepEqual(result, {
+  expect(result).toEqual({
     lastRelease: {},
     currentRelease: {
       type: "major",
@@ -149,7 +149,7 @@ test("No lastRelease", (t) => {
   });
 });
 
-test("Ignore pre-release versions", (t) => {
+it("Ignore pre-release versions", (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "master",
@@ -167,7 +167,7 @@ test("Ignore pre-release versions", (t) => {
     options: { tagFormat: `v\${version}` },
   });
 
-  t.deepEqual(result, {
+  expect(result).toEqual({
     lastRelease: { version: "1.0.0", channels: [null, "next"], gitTag: "v1.0.0", name: "v1.0.0", gitHead: "v1.0.0" },
     currentRelease: {
       type: "minor",
@@ -188,7 +188,7 @@ test("Ignore pre-release versions", (t) => {
   });
 });
 
-test('Exclude versions merged from release to maintenance branch if they have the same "channel"', (t) => {
+it('Exclude versions merged from release to maintenance branch if they have the same "channel"', (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "2.x",
@@ -211,10 +211,10 @@ test('Exclude versions merged from release to maintenance branch if they have th
     options: { tagFormat: `v\${version}` },
   });
 
-  t.is(result, undefined);
+  expect(result).toBe(undefined);
 });
 
-test('Exclude versions merged between release branches if they have the same "channel"', (t) => {
+it('Exclude versions merged between release branches if they have the same "channel"', (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "master",
@@ -233,10 +233,10 @@ test('Exclude versions merged between release branches if they have the same "ch
     options: { tagFormat: `v\${version}` },
   });
 
-  t.is(result, undefined);
+  expect(result).toBe(undefined);
 });
 
-test('Exclude versions merged between release branches if they all have "channel" set to "false"', (t) => {
+it('Exclude versions merged between release branches if they all have "channel" set to "false"', (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "master",
@@ -255,10 +255,10 @@ test('Exclude versions merged between release branches if they all have "channel
     options: { tagFormat: `v\${version}` },
   });
 
-  t.is(result, undefined);
+  expect(result).toBe(undefined);
 });
 
-test("Exclude versions number less than the latest version already released on that branch", (t) => {
+it("Exclude versions number less than the latest version already released on that branch", (t) => {
   const result = getReleaseToAdd({
     branch: {
       name: "2.x",
@@ -278,5 +278,5 @@ test("Exclude versions number less than the latest version already released on t
     options: { tagFormat: `v\${version}` },
   });
 
-  t.is(result, undefined);
+  expect(result).toBe(undefined);
 });
