@@ -1,7 +1,7 @@
-import test from "ava";
+import { expect, it } from "vitest";
 
-test("core package exports default function", async (t) => {
+it("core package exports default function", async () => {
   const core = await import("../index.js");
 
-  t.is(typeof core.default, "function");
+  expect(typeof core.default).toBe("function");
 });

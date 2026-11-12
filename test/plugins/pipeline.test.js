@@ -1,24 +1,25 @@
-import test from "ava";
+import { expect, it } from "vitest";
+import getError from "../helpers/get-error.js";
 import { stub } from "sinon";
 import AggregateError from "aggregate-error";
 import pipeline from "../../lib/plugins/pipeline.js";
 
-test("Execute each function in series passing the same input", async (t) => {
+it("Execute each function in series passing the same input", async (t) => {
   const step1 = stub().resolves(1);
   const step2 = stub().resolves(2);
   const step3 = stub().resolves(3);
 
   const result = await pipeline([step1, step2, step3])(0);
-  t.deepEqual(result, [1, 2, 3]);
-  t.true(step1.calledWith(0));
-  t.true(step2.calledWith(0));
-  t.true(step3.calledWith(0));
+  expect(result).toEqual([1, 2, 3]);
+  expect(step1.calledWith(0)).toBe(true);
+  expect(step2.calledWith(0)).toBe(true);
+  expect(step3.calledWith(0)).toBe(true);
 
-  t.true(step1.calledBefore(step2));
-  t.true(step2.calledBefore(step3));
+  expect(step1.calledBefore(step2)).toBe(true);
+  expect(step2.calledBefore(step3)).toBe(true);
 });
 
-test('Execute each function in series passing a transformed input from "getNextInput"', async (t) => {
+it('Execute each function in series passing a transformed input from "getNextInput"', async (t) => {
   const step1 = stub().resolves(1);
   const step2 = stub().resolves(2);
   const step3 = stub().resolves(3);
@@ -27,17 +28,17 @@ test('Execute each function in series passing a transformed input from "getNextI
 
   const result = await pipeline([step1, step2, step3, step4], { settleAll: false, getNextInput })(0);
 
-  t.deepEqual(result, [1, 2, 3, 4]);
-  t.true(step1.calledWith(0));
-  t.true(step2.calledWith(0 + 1));
-  t.true(step3.calledWith(0 + 1 + 2));
-  t.true(step4.calledWith(0 + 1 + 2 + 3));
-  t.true(step1.calledBefore(step2));
-  t.true(step2.calledBefore(step3));
-  t.true(step3.calledBefore(step4));
+  expect(result).toEqual([1, 2, 3, 4]);
+  expect(step1.calledWith(0)).toBe(true);
+  expect(step2.calledWith(0 + 1)).toBe(true);
+  expect(step3.calledWith(0 + 1 + 2)).toBe(true);
+  expect(step4.calledWith(0 + 1 + 2 + 3)).toBe(true);
+  expect(step1.calledBefore(step2)).toBe(true);
+  expect(step2.calledBefore(step3)).toBe(true);
+  expect(step3.calledBefore(step4)).toBe(true);
 });
 
-test('Execute each function in series passing the "lastResult" and "result" to "getNextInput"', async (t) => {
+it('Execute each function in series passing the "lastResult" and "result" to "getNextInput"', async (t) => {
   const step1 = stub().resolves(1);
   const step2 = stub().resolves(2);
   const step3 = stub().resolves(3);
@@ -46,8 +47,8 @@ test('Execute each function in series passing the "lastResult" and "result" to "
 
   const result = await pipeline([step1, step2, step3, step4], { settleAll: false, getNextInput })(5);
 
-  t.deepEqual(result, [1, 2, 3, 4]);
-  t.deepEqual(getNextInput.args, [
+  expect(result).toEqual([1, 2, 3, 4]);
+  expect(getNextInput.args).toEqual([
     [5, 1],
     [5, 2],
     [5, 3],
@@ -55,7 +56,7 @@ test('Execute each function in series passing the "lastResult" and "result" to "
   ]);
 });
 
-test('Execute each function in series calling "transform" to modify the results', async (t) => {
+it('Execute each function in series calling "transform" to modify the results', async (t) => {
   const step1 = stub().resolves(1);
   const step2 = stub().resolves(2);
   const step3 = stub().resolves(3);
@@ -65,8 +66,8 @@ test('Execute each function in series calling "transform" to modify the results'
 
   const result = await pipeline([step1, step2, step3, step4], { getNextInput, transform })(5);
 
-  t.deepEqual(result, [1 + 1, 2 + 1, 3 + 1, 4 + 1]);
-  t.deepEqual(getNextInput.args, [
+  expect(result).toEqual([1 + 1, 2 + 1, 3 + 1, 4 + 1]);
+  expect(getNextInput.args).toEqual([
     [5, 1 + 1],
     [5, 2 + 1],
     [5, 3 + 1],
@@ -74,7 +75,7 @@ test('Execute each function in series calling "transform" to modify the results'
   ]);
 });
 
-test('Execute each function in series calling "transform" to modify the results with "settleAll"', async (t) => {
+it('Execute each function in series calling "transform" to modify the results with "settleAll"', async (t) => {
   const step1 = stub().resolves(1);
   const step2 = stub().resolves(2);
   const step3 = stub().resolves(3);
@@ -84,8 +85,8 @@ test('Execute each function in series calling "transform" to modify the results 
 
   const result = await pipeline([step1, step2, step3, step4], { settleAll: true, getNextInput, transform })(5);
 
-  t.deepEqual(result, [1 + 1, 2 + 1, 3 + 1, 4 + 1]);
-  t.deepEqual(getNextInput.args, [
+  expect(result).toEqual([1 + 1, 2 + 1, 3 + 1, 4 + 1]);
+  expect(getNextInput.args).toEqual([
     [5, 1 + 1],
     [5, 2 + 1],
     [5, 3 + 1],
@@ -93,22 +94,22 @@ test('Execute each function in series calling "transform" to modify the results 
   ]);
 });
 
-test("Stop execution and throw error if a step rejects", async (t) => {
+it("Stop execution and throw error if a step rejects", async (t) => {
   const step1 = stub().resolves(1);
   const step2 = stub().rejects(new Error("test error"));
   const step3 = stub().resolves(3);
 
-  const error = await t.throwsAsync(pipeline([step1, step2, step3])(0), {
+  const error = await getError(pipeline([step1, step2, step3])(0), {
     instanceOf: Error,
     message: "test error",
   });
-  t.is(error.message, "test error");
-  t.true(step1.calledWith(0));
-  t.true(step2.calledWith(0));
-  t.true(step3.notCalled);
+  expect(error.message).toBe("test error");
+  expect(step1.calledWith(0)).toBe(true);
+  expect(step2.calledWith(0)).toBe(true);
+  expect(step3.notCalled).toBe(true);
 });
 
-test("Throw all errors from the first step throwing an AggregateError", async (t) => {
+it("Throw all errors from the first step throwing an AggregateError", async (t) => {
   const error1 = new Error("test error 1");
   const error2 = new Error("test error 2");
 
@@ -116,30 +117,30 @@ test("Throw all errors from the first step throwing an AggregateError", async (t
   const step2 = stub().rejects(new AggregateError([error1, error2]));
   const step3 = stub().resolves(3);
 
-  const error = await t.throwsAsync(pipeline([step1, step2, step3])(0));
+  const error = await getError(pipeline([step1, step2, step3])(0));
 
-  t.deepEqual([...error.errors], [error1, error2]);
-  t.true(step1.calledWith(0));
-  t.true(step2.calledWith(0));
-  t.true(step3.notCalled);
+  expect([...error.errors]).toEqual([error1, error2]);
+  expect(step1.calledWith(0)).toBe(true);
+  expect(step2.calledWith(0)).toBe(true);
+  expect(step3.notCalled).toBe(true);
 });
 
-test("Execute all even if a Promise rejects", async (t) => {
+it("Execute all even if a Promise rejects", async (t) => {
   const error1 = new Error("test error 1");
   const error2 = new Error("test error 2");
   const step1 = stub().resolves(1);
   const step2 = stub().rejects(error1);
   const step3 = stub().rejects(error2);
 
-  const error = await t.throwsAsync(pipeline([step1, step2, step3], { settleAll: true })(0));
+  const error = await getError(pipeline([step1, step2, step3], { settleAll: true })(0));
 
-  t.deepEqual([...error.errors], [error1, error2]);
-  t.true(step1.calledWith(0));
-  t.true(step2.calledWith(0));
-  t.true(step3.calledWith(0));
+  expect([...error.errors]).toEqual([error1, error2]);
+  expect(step1.calledWith(0)).toBe(true);
+  expect(step2.calledWith(0)).toBe(true);
+  expect(step3.calledWith(0)).toBe(true);
 });
 
-test("Throw all errors from all steps throwing an AggregateError", async (t) => {
+it("Throw all errors from all steps throwing an AggregateError", async (t) => {
   const error1 = new Error("test error 1");
   const error2 = new Error("test error 2");
   const error3 = new Error("test error 3");
@@ -147,14 +148,14 @@ test("Throw all errors from all steps throwing an AggregateError", async (t) => 
   const step1 = stub().rejects(new AggregateError([error1, error2]));
   const step2 = stub().rejects(new AggregateError([error3, error4]));
 
-  const error = await t.throwsAsync(pipeline([step1, step2], { settleAll: true })(0));
+  const error = await getError(pipeline([step1, step2], { settleAll: true })(0));
 
-  t.deepEqual([...error.errors], [error1, error2, error3, error4]);
-  t.true(step1.calledWith(0));
-  t.true(step2.calledWith(0));
+  expect([...error.errors]).toEqual([error1, error2, error3, error4]);
+  expect(step1.calledWith(0)).toBe(true);
+  expect(step2.calledWith(0)).toBe(true);
 });
 
-test("Execute each function in series passing a transformed input even if a step rejects", async (t) => {
+it("Execute each function in series passing a transformed input even if a step rejects", async (t) => {
   const error2 = new Error("test error 2");
   const error3 = new Error("test error 3");
   const step1 = stub().resolves(1);
@@ -163,11 +164,11 @@ test("Execute each function in series passing a transformed input even if a step
   const step4 = stub().resolves(4);
   const getNextInput = (previousResult, result) => previousResult + result;
 
-  const error = await t.throwsAsync(pipeline([step1, step2, step3, step4], { settleAll: true, getNextInput })(0));
+  const error = await getError(pipeline([step1, step2, step3, step4], { settleAll: true, getNextInput })(0));
 
-  t.deepEqual([...error.errors], [error2, error3]);
-  t.true(step1.calledWith(0));
-  t.true(step2.calledWith(0 + 1));
-  t.true(step3.calledWith(0 + 1 + error2));
-  t.true(step4.calledWith(0 + 1 + error2 + error3));
+  expect([...error.errors]).toEqual([error2, error3]);
+  expect(step1.calledWith(0)).toBe(true);
+  expect(step2.calledWith(0 + 1)).toBe(true);
+  expect(step3.calledWith(0 + 1 + error2)).toBe(true);
+  expect(step4.calledWith(0 + 1 + error2 + error3)).toBe(true);
 });
