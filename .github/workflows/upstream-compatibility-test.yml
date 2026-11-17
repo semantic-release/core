@@ -14,8 +14,7 @@ env:
   FORCE_COLOR: 1
   NPM_CONFIG_COLOR: always
   UPSTREAM_REPOSITORY: semantic-release/semantic-release
-  # TODO: update to appropriate stable branch `master` later when the core integration is stable and released
-  UPSTREAM_REF: alpha
+  UPSTREAM_REF: master
 
 jobs:
   semantic-release:
