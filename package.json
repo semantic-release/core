@@ -52,13 +52,13 @@
   },
   "homepage": "https://github.com/semantic-release/core#readme",
   "dependencies": {
-    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/commit-analyzer": "^14.0.0-beta.4",
     "@semantic-release/error": "^4.0.0",
     "aggregate-error": "^5.0.0",
-    "cosmiconfig": "^9.0.0",
+    "cosmiconfig": "^10.0.0",
     "debug": "^4.0.0",
     "env-ci": "^11.0.0",
-    "execa": "^9.0.0",
+    "execa": "^10.0.0",
     "figures": "^6.0.0",
     "get-stream": "^6.0.0",
     "git-log-parser": "^1.2.0",
@@ -75,7 +75,7 @@
     "signale": "^1.2.1"
   },
   "engines": {
-    "node": "^22.22.2 || >=24.15"
+    "node": ">=26.13"
   },
   "prettier": {
     "printWidth": 120,
@@ -97,14 +97,14 @@
     "@semantic-release/github": "12.0.10",
     "@semantic-release/npm": "13.2.0",
     "@semantic-release/release-notes-generator": "14.1.1",
-    "ava": "8.2.0",
+    "ava": "8.4.0",
     "fs-extra": "11.4.1",
     "js-yaml": "4.3.2",
     "lockfile-lint": "5.1.0",
     "ls-engines": "0.10.1",
     "mockserver-client": "9.2.0",
     "npm-run-all2": "9.0.4",
-    "p-retry": "8.0.1",
+    "p-retry": "9.0.0",
     "prettier": "3.8.3",
     "sinon": "22.1.0",
     "tempy": "3.2.0",
