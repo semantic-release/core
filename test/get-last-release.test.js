@@ -1,7 +1,7 @@
-import test from "ava";
+import { expect, it } from "vitest";
 import getLastRelease from "../lib/get-last-release.js";
 
-test("Get the highest non-prerelease valid tag", (t) => {
+it("Get the highest non-prerelease valid tag", (t) => {
   const result = getLastRelease({
     branch: {
       name: "master",
@@ -15,10 +15,16 @@ test("Get the highest non-prerelease valid tag", (t) => {
     options: { tagFormat: `v\${version}` },
   });
 
-  t.deepEqual(result, { version: "2.0.0", gitTag: "v2.0.0", name: "v2.0.0", gitHead: "v2.0.0", channels: undefined });
+  expect(result).toEqual({
+    version: "2.0.0",
+    gitTag: "v2.0.0",
+    name: "v2.0.0",
+    gitHead: "v2.0.0",
+    channels: undefined,
+  });
 });
 
-test("Get the highest prerelease valid tag, ignoring other tags from other prerelease channels", (t) => {
+it("Get the highest prerelease valid tag, ignoring other tags from other prerelease channels", (t) => {
   const result = getLastRelease({
     branch: {
       name: "beta",
@@ -34,7 +40,7 @@ test("Get the highest prerelease valid tag, ignoring other tags from other prere
     options: { tagFormat: `v\${version}` },
   });
 
-  t.deepEqual(result, {
+  expect(result).toEqual({
     version: "1.0.0-beta.2",
     gitTag: "v1.0.0-beta.2",
     name: "v1.0.0-beta.2",
@@ -43,7 +49,7 @@ test("Get the highest prerelease valid tag, ignoring other tags from other prere
   });
 });
 
-test("Get the correct prerelease tag, when other prereleases share the same git HEAD", (t) => {
+it("Get the correct prerelease tag, when other prereleases share the same git HEAD", (t) => {
   const testConfig = {
     branch: {
       name: "alpha",
@@ -60,7 +66,7 @@ test("Get the correct prerelease tag, when other prereleases share the same git 
   };
   const firstResult = getLastRelease(testConfig);
 
-  t.deepEqual(firstResult, {
+  expect(firstResult).toEqual({
     version: "1.0.0-alpha.1",
     gitTag: "v1.0.0-alpha.1",
     name: "v1.0.0-alpha.1",
@@ -71,7 +77,7 @@ test("Get the correct prerelease tag, when other prereleases share the same git 
   testConfig.branch.prerelease = true;
   const secondResult = getLastRelease(testConfig);
 
-  t.deepEqual(secondResult, {
+  expect(secondResult).toEqual({
     version: "1.0.0-alpha.1",
     gitTag: "v1.0.0-alpha.1",
     name: "v1.0.0-alpha.1",
@@ -80,7 +86,7 @@ test("Get the correct prerelease tag, when other prereleases share the same git 
   });
 });
 
-test("Return empty object if no valid tag is found", (t) => {
+it("Return empty object if no valid tag is found", (t) => {
   const result = getLastRelease({
     branch: {
       name: "master",
@@ -90,10 +96,10 @@ test("Return empty object if no valid tag is found", (t) => {
     options: { tagFormat: `v\${version}` },
   });
 
-  t.deepEqual(result, {});
+  expect(result).toEqual({});
 });
 
-test("Get the highest non-prerelease valid tag before a certain version", (t) => {
+it("Get the highest non-prerelease valid tag before a certain version", (t) => {
   const result = getLastRelease(
     {
       branch: {
@@ -113,5 +119,11 @@ test("Get the highest non-prerelease valid tag before a certain version", (t) =>
     { before: "2.1.0" }
   );
 
-  t.deepEqual(result, { version: "2.0.0", gitTag: "v2.0.0", name: "v2.0.0", gitHead: "v2.0.0", channels: undefined });
+  expect(result).toEqual({
+    version: "2.0.0",
+    gitTag: "v2.0.0",
+    name: "v2.0.0",
+    gitHead: "v2.0.0",
+    channels: undefined,
+  });
 });

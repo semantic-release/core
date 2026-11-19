@@ -1,8 +1,8 @@
-import test from "ava";
+import { expect, it } from "vitest";
 import expand from "../../lib/branches/expand.js";
 import { gitCheckout, gitCommits, gitPush, gitRepo } from "../helpers/git-utils.js";
 
-test("Expand branches defined with globs", async (t) => {
+it("Expand branches defined with globs", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
   await gitCommits(["First"], { cwd });
   await gitPush(repositoryUrl, "master", { cwd });
@@ -41,7 +41,7 @@ test("Expand branches defined with globs", async (t) => {
     { name: "beta", channel: `channel-\${name}`, prerelease: true },
   ];
 
-  t.deepEqual(await expand(repositoryUrl, { cwd }, branches), [
+  expect(await expand(repositoryUrl, { cwd }, branches)).toEqual([
     { name: "1.0.x" },
     { name: "1.x.x" },
     { name: "2.x" },
@@ -53,7 +53,7 @@ test("Expand branches defined with globs", async (t) => {
   ]);
 });
 
-test("Expand branch string fields without executing template evaluation syntax", async (t) => {
+it("Expand branch string fields without executing template evaluation syntax", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
   await gitCommits(["First"], { cwd });
   await gitPush(repositoryUrl, "master", { cwd });
@@ -63,7 +63,7 @@ test("Expand branch string fields without executing template evaluation syntax",
 
   const branches = [{ name: "release", channel: `channel-\${name}<% process.env.TEST = "x" %>`, prerelease: true }];
 
-  t.deepEqual(await expand(repositoryUrl, { cwd }, branches), [
+  expect(await expand(repositoryUrl, { cwd }, branches)).toEqual([
     { name: "release", channel: `channel-release<% process.env.TEST = "x" %>`, prerelease: true },
   ]);
 });

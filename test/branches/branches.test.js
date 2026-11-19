@@ -1,7 +1,14 @@
-import test from "ava";
+import { expect, it, beforeEach, vi } from "vitest";
+import getError from "../helpers/get-error.js";
 import { union } from "lodash-es";
 import semver from "semver";
-import * as td from "testdouble";
+
+vi.mock("../../lib/branches/get-tags.js", () => ({ default: vi.fn() }));
+vi.mock("../../lib/branches/expand.js", () => ({ default: vi.fn() }));
+
+import getTags from "../../lib/branches/get-tags.js";
+import expand from "../../lib/branches/expand.js";
+import getBranches from "../../lib/branches/index.js";
 
 const getBranch = (branches, branch) => branches.find(({ name }) => name === branch);
 const release = (branches, name, version) => getBranch(branches, name).tags.push({ version });
@@ -13,19 +20,12 @@ const merge = (branches, source, target, tag) => {
 };
 const remoteBranches = [];
 const repositoryUrl = "repositoryUrl";
-let expand, getTags, getBranches;
 
-test.beforeEach(async (t) => {
-  getTags = (await td.replaceEsm("../../lib/branches/get-tags.js")).default;
-  expand = (await td.replaceEsm("../../lib/branches/expand.js")).default;
-  getBranches = (await import("../../lib/branches/index.js")).default;
+beforeEach(() => {
+  vi.resetAllMocks();
 });
 
-test.afterEach.always((t) => {
-  td.reset();
-});
-
-test.serial("Enforce ranges with branching release workflow", async (t) => {
+it("Enforce ranges with branching release workflow", async (t) => {
   const branches = [
     { name: "1.x", tags: [] },
     { name: "1.0.x", tags: [] },
@@ -36,32 +36,36 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     { name: "alpha", prerelease: true, tags: [] },
   ];
   const context = { options: { branches } };
-  td.when(expand(repositoryUrl, context, branches)).thenResolve(remoteBranches);
-  td.when(getTags(context, remoteBranches)).thenResolve(branches);
+  expand.mockResolvedValue(remoteBranches);
+  getTags.mockResolvedValue(branches);
 
   let result = (await getBranches(repositoryUrl, "master", context)).map(({ name, range }) => ({ name, range }));
-  t.is(getBranch(result, "1.0.x").range, ">=1.0.0 <1.0.0", "Cannot release on 1.0.x before a releasing on master");
-  t.is(getBranch(result, "1.x").range, ">=1.1.0 <1.0.0", "Cannot release on 1.x before a releasing on master");
-  t.is(getBranch(result, "master").range, ">=1.0.0");
-  t.is(getBranch(result, "next").range, ">=1.0.0");
-  t.is(getBranch(result, "next-major").range, ">=1.0.0");
+  expect(getBranch(result, "1.0.x").range, "Cannot release on 1.0.x before a releasing on master").toBe(
+    ">=1.0.0 <1.0.0"
+  );
+  expect(getBranch(result, "1.x").range, "Cannot release on 1.x before a releasing on master").toBe(">=1.1.0 <1.0.0");
+  expect(getBranch(result, "master").range).toBe(">=1.0.0");
+  expect(getBranch(result, "next").range).toBe(">=1.0.0");
+  expect(getBranch(result, "next-major").range).toBe(">=1.0.0");
 
   release(branches, "master", "1.0.0");
   result = (await getBranches("repositoryUrl", "master", context)).map(({ name, range }) => ({ name, range }));
-  t.is(getBranch(result, "1.0.x").range, ">=1.0.0 <1.0.0", "Cannot release on 1.0.x before a releasing on master");
-  t.is(getBranch(result, "1.x").range, ">=1.1.0 <1.0.0", "Cannot release on 1.x before a releasing on master");
-  t.is(getBranch(result, "master").range, ">=1.0.0");
-  t.is(getBranch(result, "next").range, ">=1.0.0");
-  t.is(getBranch(result, "next-major").range, ">=1.0.0");
+  expect(getBranch(result, "1.0.x").range, "Cannot release on 1.0.x before a releasing on master").toBe(
+    ">=1.0.0 <1.0.0"
+  );
+  expect(getBranch(result, "1.x").range, "Cannot release on 1.x before a releasing on master").toBe(">=1.1.0 <1.0.0");
+  expect(getBranch(result, "master").range).toBe(">=1.0.0");
+  expect(getBranch(result, "next").range).toBe(">=1.0.0");
+  expect(getBranch(result, "next-major").range).toBe(">=1.0.0");
 
   release(branches, "master", "1.0.1");
   result = (await getBranches("repositoryUrl", "master", { options: { branches } })).map(({ name, range }) => ({
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=1.0.1", "Can release only > than 1.0.1 on master");
-  t.is(getBranch(result, "next").range, ">=1.0.1", "Can release only > than 1.0.1 on next");
-  t.is(getBranch(result, "next-major").range, ">=1.0.1", "Can release only > than 1.0.1 on next-major");
+  expect(getBranch(result, "master").range, "Can release only > than 1.0.1 on master").toBe(">=1.0.1");
+  expect(getBranch(result, "next").range, "Can release only > than 1.0.1 on next").toBe(">=1.0.1");
+  expect(getBranch(result, "next-major").range, "Can release only > than 1.0.1 on next-major").toBe(">=1.0.1");
 
   merge(branches, "master", "next");
   merge(branches, "master", "next-major");
@@ -69,9 +73,9 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=1.0.1", "Can release only > than 1.0.1 on master");
-  t.is(getBranch(result, "next").range, ">=1.0.1", "Can release only > than 1.0.1 on next");
-  t.is(getBranch(result, "next-major").range, ">=1.0.1", "Can release only > than 1.0.1 on next-major");
+  expect(getBranch(result, "master").range, "Can release only > than 1.0.1 on master").toBe(">=1.0.1");
+  expect(getBranch(result, "next").range, "Can release only > than 1.0.1 on next").toBe(">=1.0.1");
+  expect(getBranch(result, "next-major").range, "Can release only > than 1.0.1 on next-major").toBe(">=1.0.1");
 
   release(branches, "next", "1.1.0");
   release(branches, "next", "1.1.1");
@@ -79,9 +83,9 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=1.0.1 <1.1.0", "Can release only patch, > than 1.0.1 on master");
-  t.is(getBranch(result, "next").range, ">=1.1.1", "Can release only > than 1.1.1 on next");
-  t.is(getBranch(result, "next-major").range, ">=1.1.1", "Can release > than 1.1.1 on next-major");
+  expect(getBranch(result, "master").range, "Can release only patch, > than 1.0.1 on master").toBe(">=1.0.1 <1.1.0");
+  expect(getBranch(result, "next").range, "Can release only > than 1.1.1 on next").toBe(">=1.1.1");
+  expect(getBranch(result, "next-major").range, "Can release > than 1.1.1 on next-major").toBe(">=1.1.1");
 
   release(branches, "next-major", "2.0.0");
   release(branches, "next-major", "2.0.1");
@@ -89,9 +93,11 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=1.0.1 <1.1.0", "Can release only patch, > than 1.0.1 on master");
-  t.is(getBranch(result, "next").range, ">=1.1.1 <2.0.0", "Can release only patch or minor, > than 1.1.0 on next");
-  t.is(getBranch(result, "next-major").range, ">=2.0.1", "Can release any version, > than 2.0.1 on next-major");
+  expect(getBranch(result, "master").range, "Can release only patch, > than 1.0.1 on master").toBe(">=1.0.1 <1.1.0");
+  expect(getBranch(result, "next").range, "Can release only patch or minor, > than 1.1.0 on next").toBe(
+    ">=1.1.1 <2.0.0"
+  );
+  expect(getBranch(result, "next-major").range, "Can release any version, > than 2.0.1 on next-major").toBe(">=2.0.1");
 
   merge(branches, "next-major", "beta");
   release(branches, "beta", "3.0.0-beta.1");
@@ -101,7 +107,7 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "next-major").range, ">=2.0.1", "Can release any version, > than 2.0.1 on next-major");
+  expect(getBranch(result, "next-major").range, "Can release any version, > than 2.0.1 on next-major").toBe(">=2.0.1");
 
   merge(branches, "master", "1.0.x");
   merge(branches, "master", "1.x");
@@ -109,13 +115,13 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=1.0.1 <1.1.0", "Can release only patch, > than 1.0.1 on master");
-  t.is(
-    getBranch(result, "1.0.x").range,
-    ">=1.0.1 <1.0.1",
-    "Cannot release on 1.0.x before >= 1.1.0 is released on master"
+  expect(getBranch(result, "master").range, "Can release only patch, > than 1.0.1 on master").toBe(">=1.0.1 <1.1.0");
+  expect(getBranch(result, "1.0.x").range, "Cannot release on 1.0.x before >= 1.1.0 is released on master").toBe(
+    ">=1.0.1 <1.0.1"
   );
-  t.is(getBranch(result, "1.x").range, ">=1.1.0 <1.0.1", "Cannot release on 1.x before >= 1.2.0 is released on master");
+  expect(getBranch(result, "1.x").range, "Cannot release on 1.x before >= 1.2.0 is released on master").toBe(
+    ">=1.1.0 <1.0.1"
+  );
 
   release(branches, "master", "1.0.2");
   release(branches, "master", "1.0.3");
@@ -124,13 +130,13 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=1.0.4 <1.1.0", "Can release only patch, > than 1.0.4 on master");
-  t.is(
-    getBranch(result, "1.0.x").range,
-    ">=1.0.1 <1.0.2",
-    "Cannot release on 1.0.x before >= 1.1.0 is released on master"
+  expect(getBranch(result, "master").range, "Can release only patch, > than 1.0.4 on master").toBe(">=1.0.4 <1.1.0");
+  expect(getBranch(result, "1.0.x").range, "Cannot release on 1.0.x before >= 1.1.0 is released on master").toBe(
+    ">=1.0.1 <1.0.2"
   );
-  t.is(getBranch(result, "1.x").range, ">=1.1.0 <1.0.2", "Cannot release on 1.x before >= 1.2.0 is released on master");
+  expect(getBranch(result, "1.x").range, "Cannot release on 1.x before >= 1.2.0 is released on master").toBe(
+    ">=1.1.0 <1.0.2"
+  );
 
   merge(branches, "next", "master");
   result = (await getBranches("repositoryUrl", "master", { options: { branches } })).map(({ name, range }) => ({
@@ -138,33 +144,39 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     range,
   }));
 
-  t.is(getBranch(result, "master").range, ">=1.1.1", "Can release only > than 1.1.1 on master");
-  t.is(getBranch(result, "next").range, ">=1.1.1 <2.0.0", "Can release only patch or minor, > than 1.1.1 on next");
-  t.is(getBranch(result, "next-major").range, ">=2.0.1", "Can release any version, > than 2.0.1 on next-major");
-  t.is(
-    getBranch(result, "1.0.x").range,
-    ">=1.0.1 <1.0.2",
-    "Cannot release on 1.0.x before 1.0.x version from master are merged"
+  expect(getBranch(result, "master").range, "Can release only > than 1.1.1 on master").toBe(">=1.1.1");
+  expect(getBranch(result, "next").range, "Can release only patch or minor, > than 1.1.1 on next").toBe(
+    ">=1.1.1 <2.0.0"
   );
-  t.is(getBranch(result, "1.x").range, ">=1.1.0 <1.0.2", "Cannot release on 1.x before >= 2.0.0 is released on master");
+  expect(getBranch(result, "next-major").range, "Can release any version, > than 2.0.1 on next-major").toBe(">=2.0.1");
+  expect(getBranch(result, "1.0.x").range, "Cannot release on 1.0.x before 1.0.x version from master are merged").toBe(
+    ">=1.0.1 <1.0.2"
+  );
+  expect(getBranch(result, "1.x").range, "Cannot release on 1.x before >= 2.0.0 is released on master").toBe(
+    ">=1.1.0 <1.0.2"
+  );
 
   merge(branches, "master", "1.0.x", "1.0.4");
   result = (await getBranches("repositoryUrl", "master", { options: { branches } })).map(({ name, range }) => ({
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=1.1.1", "Can release only > than 1.1.1 on master");
-  t.is(getBranch(result, "1.0.x").range, ">=1.0.4 <1.1.0", "Can release on 1.0.x only within range");
-  t.is(getBranch(result, "1.x").range, ">=1.1.0 <1.1.0", "Cannot release on 1.x before >= 2.0.0 is released on master");
+  expect(getBranch(result, "master").range, "Can release only > than 1.1.1 on master").toBe(">=1.1.1");
+  expect(getBranch(result, "1.0.x").range, "Can release on 1.0.x only within range").toBe(">=1.0.4 <1.1.0");
+  expect(getBranch(result, "1.x").range, "Cannot release on 1.x before >= 2.0.0 is released on master").toBe(
+    ">=1.1.0 <1.1.0"
+  );
 
   merge(branches, "master", "1.x");
   result = (await getBranches("repositoryUrl", "master", { options: { branches } })).map(({ name, range }) => ({
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=1.1.1", "Can release only > than 1.1.1 on master");
-  t.is(getBranch(result, "1.0.x").range, ">=1.0.4 <1.1.0", "Can release on 1.0.x only within range");
-  t.is(getBranch(result, "1.x").range, ">=1.1.1 <1.1.1", "Cannot release on 1.x before >= 2.0.0 is released on master");
+  expect(getBranch(result, "master").range, "Can release only > than 1.1.1 on master").toBe(">=1.1.1");
+  expect(getBranch(result, "1.0.x").range, "Can release on 1.0.x only within range").toBe(">=1.0.4 <1.1.0");
+  expect(getBranch(result, "1.x").range, "Cannot release on 1.x before >= 2.0.0 is released on master").toBe(
+    ">=1.1.1 <1.1.1"
+  );
 
   merge(branches, "next-major", "next");
   merge(branches, "next", "master");
@@ -172,10 +184,10 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=2.0.1", "Can release only > than 2.0.1 on master");
-  t.is(getBranch(result, "next").range, ">=2.0.1", "Can release only > than 2.0.1 on next");
-  t.is(getBranch(result, "next-major").range, ">=2.0.1", "Can release only > than 2.0.1 on next-major");
-  t.is(getBranch(result, "1.x").range, ">=1.1.1 <2.0.0", "Can release on 1.x only within range");
+  expect(getBranch(result, "master").range, "Can release only > than 2.0.1 on master").toBe(">=2.0.1");
+  expect(getBranch(result, "next").range, "Can release only > than 2.0.1 on next").toBe(">=2.0.1");
+  expect(getBranch(result, "next-major").range, "Can release only > than 2.0.1 on next-major").toBe(">=2.0.1");
+  expect(getBranch(result, "1.x").range, "Can release on 1.x only within range").toBe(">=1.1.1 <2.0.0");
 
   merge(branches, "beta", "master");
   release(branches, "master", "3.0.0");
@@ -183,9 +195,9 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "master").range, ">=3.0.0", "Can release only > than 3.0.0 on master");
-  t.is(getBranch(result, "next").range, ">=3.0.0", "Can release only > than 3.0.0 on next");
-  t.is(getBranch(result, "next-major").range, ">=3.0.0", "Can release only > than 3.0.0 on next-major");
+  expect(getBranch(result, "master").range, "Can release only > than 3.0.0 on master").toBe(">=3.0.0");
+  expect(getBranch(result, "next").range, "Can release only > than 3.0.0 on next").toBe(">=3.0.0");
+  expect(getBranch(result, "next-major").range, "Can release only > than 3.0.0 on next-major").toBe(">=3.0.0");
 
   branches.push({ name: "1.1.x", tags: [] });
   merge(branches, "1.x", "1.1.x");
@@ -193,12 +205,12 @@ test.serial("Enforce ranges with branching release workflow", async (t) => {
     name,
     range,
   }));
-  t.is(getBranch(result, "1.0.x").range, ">=1.0.4 <1.1.0", "Can release on 1.0.x only within range");
-  t.is(getBranch(result, "1.1.x").range, ">=1.1.1 <1.2.0", "Can release on 1.1.x only within range");
-  t.is(getBranch(result, "1.x").range, ">=1.2.0 <2.0.0", "Can release on 1.x only within range");
+  expect(getBranch(result, "1.0.x").range, "Can release on 1.0.x only within range").toBe(">=1.0.4 <1.1.0");
+  expect(getBranch(result, "1.1.x").range, "Can release on 1.1.x only within range").toBe(">=1.1.1 <1.2.0");
+  expect(getBranch(result, "1.x").range, "Can release on 1.x only within range").toBe(">=1.2.0 <2.0.0");
 });
 
-test.serial("Throw SemanticReleaseError for invalid configurations", async (t) => {
+it("Throw SemanticReleaseError for invalid configurations", async (t) => {
   const branches = [
     { name: "123", range: "123", tags: [] },
     { name: "1.x", tags: [] },
@@ -209,69 +221,69 @@ test.serial("Throw SemanticReleaseError for invalid configurations", async (t) =
     { name: "preview", prerelease: "alpha", tags: [] },
   ];
   const context = { options: { branches } };
-  td.when(expand(repositoryUrl, context, branches)).thenResolve(remoteBranches);
-  td.when(getTags(context, remoteBranches)).thenResolve(branches);
+  expand.mockResolvedValue(remoteBranches);
+  getTags.mockResolvedValue(branches);
 
-  const error = await t.throwsAsync(getBranches(repositoryUrl, "master", context));
+  const error = await getError(getBranches(repositoryUrl, "master", context));
   const errors = [...error.errors];
 
-  t.is(errors[0].name, "SemanticReleaseError");
-  t.is(errors[0].code, "EMAINTENANCEBRANCH");
-  t.truthy(errors[0].message);
-  t.truthy(errors[0].details);
-  t.is(errors[1].name, "SemanticReleaseError");
-  t.is(errors[1].code, "EMAINTENANCEBRANCHES");
-  t.truthy(errors[1].message);
-  t.truthy(errors[1].details);
-  t.is(errors[2].name, "SemanticReleaseError");
-  t.is(errors[2].code, "EPRERELEASEBRANCH");
-  t.truthy(errors[2].message);
-  t.truthy(errors[2].details);
-  t.is(errors[3].name, "SemanticReleaseError");
-  t.is(errors[3].code, "EPRERELEASEBRANCHES");
-  t.truthy(errors[3].message);
-  t.truthy(errors[3].details);
-  t.is(errors[4].name, "SemanticReleaseError");
-  t.is(errors[4].code, "ERELEASEBRANCHES");
-  t.truthy(errors[4].message);
-  t.truthy(errors[4].details);
+  expect(errors[0].name).toBe("SemanticReleaseError");
+  expect(errors[0].code).toBe("EMAINTENANCEBRANCH");
+  expect(errors[0].message).toBeTruthy();
+  expect(errors[0].details).toBeTruthy();
+  expect(errors[1].name).toBe("SemanticReleaseError");
+  expect(errors[1].code).toBe("EMAINTENANCEBRANCHES");
+  expect(errors[1].message).toBeTruthy();
+  expect(errors[1].details).toBeTruthy();
+  expect(errors[2].name).toBe("SemanticReleaseError");
+  expect(errors[2].code).toBe("EPRERELEASEBRANCH");
+  expect(errors[2].message).toBeTruthy();
+  expect(errors[2].details).toBeTruthy();
+  expect(errors[3].name).toBe("SemanticReleaseError");
+  expect(errors[3].code).toBe("EPRERELEASEBRANCHES");
+  expect(errors[3].message).toBeTruthy();
+  expect(errors[3].details).toBeTruthy();
+  expect(errors[4].name).toBe("SemanticReleaseError");
+  expect(errors[4].code).toBe("ERELEASEBRANCHES");
+  expect(errors[4].message).toBeTruthy();
+  expect(errors[4].details).toBeTruthy();
 });
 
-test.serial("Throw a SemanticReleaseError if there is duplicate branches", async (t) => {
+it("Throw a SemanticReleaseError if there is duplicate branches", async (t) => {
   const branches = [
     { name: "master", tags: [] },
     { name: "master", tags: [] },
   ];
   const context = { options: { branches } };
-  td.when(expand(repositoryUrl, context, branches)).thenResolve(remoteBranches);
-  td.when(getTags(context, remoteBranches)).thenResolve(branches);
+  expand.mockResolvedValue(remoteBranches);
+  getTags.mockResolvedValue(branches);
 
-  const errors = [...(await t.throwsAsync(getBranches(repositoryUrl, "master", context))).errors];
+  const errors = [...(await getError(getBranches(repositoryUrl, "master", context))).errors];
 
-  t.is(errors[0].name, "SemanticReleaseError");
-  t.is(errors[0].code, "EDUPLICATEBRANCHES");
-  t.truthy(errors[0].message);
-  t.truthy(errors[0].details);
+  expect(errors[0].name).toBe("SemanticReleaseError");
+  expect(errors[0].code).toBe("EDUPLICATEBRANCHES");
+  expect(errors[0].message).toBeTruthy();
+  expect(errors[0].details).toBeTruthy();
 });
 
-test.serial("Throw a SemanticReleaseError for each invalid branch name", async (t) => {
+it("Throw a SemanticReleaseError for each invalid branch name", async (t) => {
   const branches = [
     { name: "~master", tags: [] },
     { name: "^master", tags: [] },
   ];
   const context = { options: { branches } };
   const remoteBranches = [];
-  td.when(expand(repositoryUrl, context, branches)).thenResolve(remoteBranches);
-  td.when(getTags(context, remoteBranches)).thenResolve(branches);
+  expand.mockResolvedValue(remoteBranches);
+  getTags.mockResolvedValue(branches);
 
-  const errors = [...(await t.throwsAsync(getBranches(repositoryUrl, "master", context))).errors];
+  const errors = [...(await getError(getBranches(repositoryUrl, "master", context))).errors];
 
-  t.is(errors[0].name, "SemanticReleaseError");
-  t.is(errors[0].code, "EINVALIDBRANCHNAME");
-  t.truthy(errors[0].message);
-  t.truthy(errors[0].details);
-  t.is(errors[1].name, "SemanticReleaseError");
-  t.is(errors[1].code, "EINVALIDBRANCHNAME");
-  t.truthy(errors[1].message);
-  t.truthy(errors[1].details);
+  expect(errors[0].name).toBe("SemanticReleaseError");
+  expect(errors[0].code).toBe("EINVALIDBRANCHNAME");
+  expect(errors[0].message).toBeTruthy();
+  expect(errors[0].details).toBeTruthy();
+  expect(errors[1].name).toBe("SemanticReleaseError");
+  expect(errors[1].code).toBe("EINVALIDBRANCHNAME");
+  expect(errors[1].message).toBeTruthy();
+  expect(errors[1].details).toBeTruthy();
 });

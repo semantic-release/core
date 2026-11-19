@@ -1,8 +1,8 @@
-import test from "ava";
+import { expect, it } from "vitest";
 import getTags from "../../lib/branches/get-tags.js";
 import { gitAddNote, gitCheckout, gitCommits, gitRepo, gitTagVersion } from "../helpers/git-utils.js";
 
-test("Get the valid tags", async (t) => {
+it("Get the valid tags", async (t) => {
   const { cwd } = await gitRepo();
   const commits = await gitCommits(["First"], { cwd });
   await gitTagVersion("foo", undefined, { cwd });
@@ -16,7 +16,7 @@ test("Get the valid tags", async (t) => {
 
   const result = await getTags({ cwd, options: { tagFormat: `v\${version}` } }, [{ name: "master" }]);
 
-  t.deepEqual(result, [
+  expect(result).toEqual([
     {
       name: "master",
       tags: [
@@ -28,7 +28,7 @@ test("Get the valid tags", async (t) => {
   ]);
 });
 
-test("Get the valid tags from multiple branches", async (t) => {
+it("Get the valid tags from multiple branches", async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
   await gitTagVersion("v1.0.0", undefined, { cwd });
@@ -52,7 +52,7 @@ test("Get the valid tags from multiple branches", async (t) => {
     { name: "next" },
   ]);
 
-  t.deepEqual(result, [
+  expect(result).toEqual([
     {
       name: "1.x",
       tags: [
@@ -71,7 +71,7 @@ test("Get the valid tags from multiple branches", async (t) => {
   ]);
 });
 
-test("Return branches with and empty tags array if no valid tag is found", async (t) => {
+it("Return branches with and empty tags array if no valid tag is found", async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
   await gitTagVersion("foo", undefined, { cwd });
@@ -82,10 +82,10 @@ test("Return branches with and empty tags array if no valid tag is found", async
 
   const result = await getTags({ cwd, options: { tagFormat: `prefix@v\${version}` } }, [{ name: "master" }]);
 
-  t.deepEqual(result, [{ name: "master", tags: [] }]);
+  expect(result).toEqual([{ name: "master", tags: [] }]);
 });
 
-test("Return branches with and empty tags array if no valid tag is found in history of configured branches", async (t) => {
+it("Return branches with and empty tags array if no valid tag is found in history of configured branches", async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
   await gitCheckout("next", true, { cwd });
@@ -105,28 +105,28 @@ test("Return branches with and empty tags array if no valid tag is found in hist
     { name: "next" },
   ]);
 
-  t.deepEqual(result, [
+  expect(result).toEqual([
     { name: "master", tags: [] },
     { name: "next", tags: [] },
   ]);
 });
 
-test('Get the highest valid tag corresponding to the "tagFormat"', async (t) => {
+it('Get the highest valid tag corresponding to the "tagFormat"', async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
 
   await gitTagVersion("1.0.0", undefined, { cwd });
-  t.deepEqual(await getTags({ cwd, options: { tagFormat: `\${version}` } }, [{ name: "master" }]), [
+  expect(await getTags({ cwd, options: { tagFormat: `\${version}` } }, [{ name: "master" }])).toEqual([
     { name: "master", tags: [{ gitTag: "1.0.0", version: "1.0.0", channels: [null] }] },
   ]);
 
   await gitTagVersion("foo-1.0.0-bar", undefined, { cwd });
-  t.deepEqual(await getTags({ cwd, options: { tagFormat: `foo-\${version}-bar` } }, [{ name: "master" }]), [
+  expect(await getTags({ cwd, options: { tagFormat: `foo-\${version}-bar` } }, [{ name: "master" }])).toEqual([
     { name: "master", tags: [{ gitTag: "foo-1.0.0-bar", version: "1.0.0", channels: [null] }] },
   ]);
 
   await gitTagVersion("foo-v1.0.0-bar", undefined, { cwd });
-  t.deepEqual(await getTags({ cwd, options: { tagFormat: `foo-v\${version}-bar` } }, [{ name: "master" }]), [
+  expect(await getTags({ cwd, options: { tagFormat: `foo-v\${version}-bar` } }, [{ name: "master" }])).toEqual([
     {
       name: "master",
       tags: [{ gitTag: "foo-v1.0.0-bar", version: "1.0.0", channels: [null] }],
@@ -134,7 +134,7 @@ test('Get the highest valid tag corresponding to the "tagFormat"', async (t) => 
   ]);
 
   await gitTagVersion("(.+)/1.0.0/(a-z)", undefined, { cwd });
-  t.deepEqual(await getTags({ cwd, options: { tagFormat: `(.+)/\${version}/(a-z)` } }, [{ name: "master" }]), [
+  expect(await getTags({ cwd, options: { tagFormat: `(.+)/\${version}/(a-z)` } }, [{ name: "master" }])).toEqual([
     {
       name: "master",
       tags: [{ gitTag: "(.+)/1.0.0/(a-z)", version: "1.0.0", channels: [null] }],
@@ -142,7 +142,7 @@ test('Get the highest valid tag corresponding to the "tagFormat"', async (t) => 
   ]);
 
   await gitTagVersion("2.0.0-1.0.0-bar.1", undefined, { cwd });
-  t.deepEqual(await getTags({ cwd, options: { tagFormat: `2.0.0-\${version}-bar.1` } }, [{ name: "master" }]), [
+  expect(await getTags({ cwd, options: { tagFormat: `2.0.0-\${version}-bar.1` } }, [{ name: "master" }])).toEqual([
     {
       name: "master",
       tags: [{ gitTag: "2.0.0-1.0.0-bar.1", version: "1.0.0", channels: [null] }],
@@ -150,12 +150,12 @@ test('Get the highest valid tag corresponding to the "tagFormat"', async (t) => 
   ]);
 
   await gitTagVersion("3.0.0-bar.2", undefined, { cwd });
-  t.deepEqual(await getTags({ cwd, options: { tagFormat: `\${version}-bar.2` } }, [{ name: "master" }]), [
+  expect(await getTags({ cwd, options: { tagFormat: `\${version}-bar.2` } }, [{ name: "master" }])).toEqual([
     { name: "master", tags: [{ gitTag: "3.0.0-bar.2", version: "3.0.0", channels: [null] }] },
   ]);
 });
 
-test.serial('Do not execute template evaluation syntax in "tagFormat" when building the tag regexp', async (t) => {
+it('Do not execute template evaluation syntax in "tagFormat" when building the tag regexp', async (t) => {
   const { cwd } = await gitRepo();
   await gitCommits(["First"], { cwd });
 
@@ -169,6 +169,6 @@ test.serial('Do not execute template evaluation syntax in "tagFormat" when build
     [{ name: "master" }]
   );
 
-  t.is(process.env.GET_TAGS_TEMPLATE_PWNED, undefined);
-  t.deepEqual(result, [{ name: "master", tags: [] }]);
+  expect(process.env.GET_TAGS_TEMPLATE_PWNED).toBe(undefined);
+  expect(result).toEqual([{ name: "master", tags: [] }]);
 });

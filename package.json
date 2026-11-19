@@ -24,7 +24,7 @@
     "lint:engines": "ls-engines",
     "format": "npm run lint:prettier:fix",
     "test": "npm-run-all --print-label --parallel lint:* --serial test:*",
-    "test:unit": "ava --verbose --ignore-pattern=test/e2e.test.js",
+    "test:unit": "vitest run",
     "test:integration": "ava --verbose test/integration.test.js",
     "test:e2e": "ava --verbose test/e2e.test.js"
   },
@@ -109,6 +109,6 @@
     "sinon": "22.1.0",
     "tempy": "3.2.0",
     "testcontainers": "12.2.1",
-    "testdouble": "4.0.0"
+    "vitest": "5.0.5"
   }
 }

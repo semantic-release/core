@@ -1,11 +1,11 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import test from "ava";
+import { expect, it, onTestFinished } from "vitest";
 
 import resolveConfig from "../lib/resolve-config.js";
 
-test("core uses plugins passed via options", async (t) => {
+it("core uses plugins passed via options", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
   const logger = {
     success() {},
@@ -18,7 +18,7 @@ test("core uses plugins passed via options", async (t) => {
   };
   const runtimePlugins = [{ analyzeCommits() {} }];
 
-  t.teardown(async () => {
+  onTestFinished(async () => {
     await rm(cwd, { recursive: true, force: true });
   });
 
@@ -27,11 +27,11 @@ test("core uses plugins passed via options", async (t) => {
     { repositoryUrl: "https://example.com/semantic-release.git", plugins: runtimePlugins }
   );
 
-  t.is(options.repositoryUrl, "https://example.com/semantic-release.git");
-  t.deepEqual(options.plugins, runtimePlugins);
+  expect(options.repositoryUrl).toBe("https://example.com/semantic-release.git");
+  expect(options.plugins).toEqual(runtimePlugins);
 });
 
-test("core ignores legacy defaultPlugins context argument", async (t) => {
+it("core ignores legacy defaultPlugins context argument", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
   const defaultPlugins = [{ analyzeCommits() {} }];
   const runtimePlugins = [{ analyzeCommits() {} }];
@@ -44,7 +44,7 @@ test("core ignores legacy defaultPlugins context argument", async (t) => {
       return this;
     },
   };
-  t.teardown(async () => {
+  onTestFinished(async () => {
     await rm(cwd, { recursive: true, force: true });
   });
 
@@ -53,12 +53,12 @@ test("core ignores legacy defaultPlugins context argument", async (t) => {
     { repositoryUrl: "https://example.com/semantic-release.git", plugins: runtimePlugins }
   );
 
-  t.is(options.repositoryUrl, "https://example.com/semantic-release.git");
-  t.deepEqual(options.plugins, runtimePlugins);
-  t.not(options.plugins, defaultPlugins);
+  expect(options.repositoryUrl).toBe("https://example.com/semantic-release.git");
+  expect(options.plugins).toEqual(runtimePlugins);
+  expect(options.plugins).not.toBe(defaultPlugins);
 });
 
-test("core does not build plugin pipeline by default", async (t) => {
+it("core does not build plugin pipeline by default", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
   const logger = {
     success() {},
@@ -70,7 +70,7 @@ test("core does not build plugin pipeline by default", async (t) => {
     },
   };
 
-  t.teardown(async () => {
+  onTestFinished(async () => {
     await rm(cwd, { recursive: true, force: true });
   });
 
@@ -79,12 +79,12 @@ test("core does not build plugin pipeline by default", async (t) => {
     { repositoryUrl: "https://example.com/semantic-release.git", plugins: ["@semantic-release/commit-analyzer"] }
   );
 
-  t.is(options.repositoryUrl, "https://example.com/semantic-release.git");
-  t.deepEqual(options.plugins, ["@semantic-release/commit-analyzer"]);
-  t.is(plugins, undefined);
+  expect(options.repositoryUrl).toBe("https://example.com/semantic-release.git");
+  expect(options.plugins).toEqual(["@semantic-release/commit-analyzer"]);
+  expect(plugins).toBe(undefined);
 });
 
-test("core merges baseConfig object before discovered config and runtime options", async (t) => {
+it("core merges baseConfig object before discovered config and runtime options", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
   const logger = {
     success() {},
@@ -96,7 +96,7 @@ test("core merges baseConfig object before discovered config and runtime options
     },
   };
 
-  t.teardown(async () => {
+  onTestFinished(async () => {
     await rm(cwd, { recursive: true, force: true });
   });
 
@@ -111,11 +111,11 @@ test("core merges baseConfig object before discovered config and runtime options
     }
   );
 
-  t.is(options.repositoryUrl, "https://example.com/override.git");
-  t.deepEqual(options.plugins, ["@semantic-release/commit-analyzer", "@semantic-release/release-notes-generator"]);
+  expect(options.repositoryUrl).toBe("https://example.com/override.git");
+  expect(options.plugins).toEqual(["@semantic-release/commit-analyzer", "@semantic-release/release-notes-generator"]);
 });
 
-test("core loads baseConfig from file path", async (t) => {
+it("core loads baseConfig from file path", async (t) => {
   const cwd = await mkdtemp(path.join(tmpdir(), "semantic-release-core-config-"));
   const logger = {
     success() {},
@@ -127,7 +127,7 @@ test("core loads baseConfig from file path", async (t) => {
     },
   };
 
-  t.teardown(async () => {
+  onTestFinished(async () => {
     await rm(cwd, { recursive: true, force: true });
   });
 
@@ -143,5 +143,5 @@ test("core loads baseConfig from file path", async (t) => {
     { baseConfig: baseConfigPath, buildPlugins: false }
   );
 
-  t.deepEqual(options.plugins, ["@semantic-release/commit-analyzer", "@semantic-release/github"]);
+  expect(options.plugins).toEqual(["@semantic-release/commit-analyzer", "@semantic-release/github"]);
 });
