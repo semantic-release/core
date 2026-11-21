@@ -75,9 +75,6 @@
     "semver": "^7.3.2",
     "signale": "^1.2.1"
   },
-  "peerDependencies": {
-    "@semantic-release/commit-analyzer": "^14.0.0-beta.4"
-  },
   "engines": {
     "node": ">=26.13"
   },
