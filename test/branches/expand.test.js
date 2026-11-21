@@ -1,6 +1,6 @@
 import test from "ava";
 import expand from "../../lib/branches/expand.js";
-import { gitCheckout, gitCommits, gitPush, gitRepo } from "../helpers/git-utils.js";
+import { gitCheckout, gitCommits, gitPush, gitRepo } from "../helpers/git.js";
 
 test("Expand branches defined with globs", async (t) => {
   const { cwd, repositoryUrl } = await gitRepo(true);
