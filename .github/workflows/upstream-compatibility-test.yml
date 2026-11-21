@@ -1,0 +1,47 @@
+name: Upstream Compatibility Test
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+
+env:
+  FORCE_COLOR: 1
+  NPM_CONFIG_COLOR: always
+  UPSTREAM_REPOSITORY: semantic-release/semantic-release
+  UPSTREAM_REF: master
+
+jobs:
+  semantic-release:
+    name: semantic-release compatibility test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm clean-install
+      - run: npm pack --pack-destination "$RUNNER_TEMP"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.UPSTREAM_REPOSITORY }}
+          ref: ${{ env.UPSTREAM_REF }}
+          path: semantic-release
+
+      - run: git config --global user.name github-actions
+      - run: git config --global user.email github-actions@github.com
+      - run: npm clean-install
+        working-directory: semantic-release
+      - run: npm install --no-save --package-lock=false "$RUNNER_TEMP"/semantic-release-core-*.tgz
+        working-directory: semantic-release
+      - run: npm run test:e2e
+        working-directory: semantic-release
