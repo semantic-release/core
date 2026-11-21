@@ -1,7 +1,7 @@
 import test from "ava";
 import { temporaryDirectory } from "tempy";
 import verify from "../lib/verify.js";
-import { gitRepo } from "./helpers/git-utils.js";
+import { gitRepo } from "./helpers/git.js";
 
 test("Throw a AggregateError", async (t) => {
   const { cwd } = await gitRepo();

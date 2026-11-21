@@ -1,7 +1,7 @@
 import test from "ava";
 import { stub } from "sinon";
 import getCommits from "../lib/get-commits.js";
-import { gitCommits, gitDetachedHead, gitRepo } from "./helpers/git-utils.js";
+import { gitCommits, gitDetachedHead, gitRepo } from "./helpers/git.js";
 
 test.beforeEach((t) => {
   t.context.log = stub();
