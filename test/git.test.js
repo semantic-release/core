@@ -36,7 +36,7 @@ import {
   gitShallowClone,
   gitTagVersion,
   initGit,
-} from "./helpers/git-utils.js";
+} from "./helpers/git.js";
 
 test("Get the last commit sha", async (t) => {
   const { cwd } = await gitRepo();

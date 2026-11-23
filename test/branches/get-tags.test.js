@@ -1,6 +1,6 @@
 import test from "ava";
 import getTags from "../../lib/branches/get-tags.js";
-import { gitAddNote, gitCheckout, gitCommits, gitRepo, gitTagVersion } from "../helpers/git-utils.js";
+import { gitAddNote, gitCheckout, gitCommits, gitRepo, gitTagVersion } from "../helpers/git.js";
 
 test("Get the valid tags", async (t) => {
   const { cwd } = await gitRepo();
