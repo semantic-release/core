@@ -1,6 +1,6 @@
 import test from "ava";
 import getAuthUrl from "../lib/get-git-auth-url.js";
-import { gitRepo } from "./helpers/git-utils.js";
+import { gitRepo } from "./helpers/git.js";
 
 const env = { GIT_ASKPASS: "echo", GIT_TERMINAL_PROMPT: 0 };
 
