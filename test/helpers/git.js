@@ -1,12 +1,12 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 
 import { execa } from "execa";
 import pEachSeries from "p-each-series";
 import gitLogParser from "git-log-parser";
-import { getStreamAsArray } from "get-stream";
 import { GIT_NOTE_REF } from "../../lib/definitions/constants.js";
 
 /**
@@ -101,12 +101,14 @@ export async function gitGetCommits(from, execaOptions = {}) {
   });
 
   return (
-    await getStreamAsArray(
-      gitLogParser.parse(
-        { _: `${from ? `${from}..` : ""}HEAD` },
-        { ...execaOptions, env: { ...process.env, ...execaOptions.env } }
+    await new Readable({ objectMode: true })
+      .wrap(
+        gitLogParser.parse(
+          { _: `${from ? `${from}..` : ""}HEAD` },
+          { ...execaOptions, env: { ...process.env, ...execaOptions.env } }
+        )
       )
-    )
+      .toArray()
   ).map((commit) => ({
     ...commit,
     message: commit.message.trim(),
