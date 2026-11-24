@@ -106,7 +106,7 @@
     "mockserver-client": "9.4.0",
     "npm-run-all2": "9.0.4",
     "p-retry": "9.0.0",
-    "prettier": "3.8.3",
+    "prettier": "3.10.1",
     "publint": "0.3.25",
     "sinon": "22.1.0",
     "tempy": "3.2.0",
