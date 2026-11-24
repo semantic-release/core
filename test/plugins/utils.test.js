@@ -1,4 +1,7 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import test from "ava";
+import { temporaryDirectoryTask } from "tempy";
 import { loadPlugin, parseConfig, validatePlugin, validateStep } from "../../lib/plugins/utils.js";
 
 test("validatePlugin", (t) => {
@@ -211,6 +214,18 @@ test("loadPlugin", async (t) => {
   t.deepEqual(namedExports, plugin, "ESM with named exports");
   t.is(func, await loadPlugin({ cwd }, func, {}), "Defined as a function");
 });
+
+for (const directory of ["plugin#fixtures", "plugin%2Ffixtures"]) {
+  test(`loadPlugin from ${directory}`, async (t) => {
+    await temporaryDirectoryTask(async (root) => {
+      const cwd = join(root, directory);
+      await mkdir(cwd);
+      await writeFile(join(cwd, "plugin.mjs"), 'export const verifyConditions = () => "loaded";');
+      const plugin = await loadPlugin({ cwd }, "./plugin.mjs", {});
+      t.is(plugin.verifyConditions(), "loaded");
+    });
+  });
+}
 
 test("parseConfig", (t) => {
   const path = "plugin-module";
