@@ -48,6 +48,21 @@ test("Maintenance branches - initial state", (t) => {
   );
 });
 
+test("Maintenance branches - order multi-digit ranges by version", (t) => {
+  const maintenance = ["10.x", "2.x", "1.10.x", "1.5.x"].map((name) => ({ name, tags: [] }));
+  const release = [{ name: "master", tags: toTags(["11.0.0"]) }];
+
+  t.deepEqual(
+    normalize.maintenance({ maintenance, release }).map(({ name, mergeRange }) => [name, mergeRange]),
+    [
+      ["1.5.x", ">=1.5.0 <1.6.0"],
+      ["1.10.x", ">=1.10.0 <1.11.0"],
+      ["2.x", ">=1.11.0 <3.0.0"],
+      ["10.x", ">=10.0.0 <11.0.0"],
+    ]
+  );
+});
+
 test("Maintenance branches - cap range to first release present on default branch and not in any Maintenance one", (t) => {
   const maintenance = [
     { name: "1.x", tags: toTags(["1.0.0", "1.1.0", "1.1.1", "1.2.0", "1.2.1", "1.3.0", "1.4.0", "1.5.0"]) },
