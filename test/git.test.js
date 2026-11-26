@@ -291,6 +291,21 @@ test("Return falsy if repository is not up to date", async (t) => {
   t.falsy(await isBranchUpToDate(repositoryUrl, "master", { cwd }));
 });
 
+test('Return "true" when another branch ends with the branch name', async (t) => {
+  const { cwd, repositoryUrl } = await gitRepo(true);
+  await gitCommits(["First"], { cwd });
+  await gitPush(repositoryUrl, "master", { cwd });
+
+  // `git ls-remote --heads -- <url> master` also matches "refs/heads/fix/master",
+  // and "fix/master" sorts before "master" in its output.
+  await gitCheckout("fix/master", true, { cwd });
+  await gitCommits(["Second"], { cwd });
+  await gitPush(repositoryUrl, "fix/master", { cwd });
+  await gitCheckout("master", false, { cwd });
+
+  t.true(await isBranchUpToDate(repositoryUrl, "master", { cwd }));
+});
+
 test("Return falsy if detached head repository is not up to date", async (t) => {
   let { cwd, repositoryUrl } = await gitRepo();
 
